@@ -5,7 +5,6 @@ import {
   Book,
   curatedBooks,
   getAutomatedWeeklyPick,
-  getCurrentWeekOfYear,
 } from "@/data/libraryData";
 import ZenReaderModal from "@/components/ZenReaderModal";
 import {
@@ -16,168 +15,210 @@ import {
   Compass,
   UploadCloud,
   Library,
-  Sparkles,
+  Search,
   RefreshCw,
   Smartphone,
   Laptop,
   Check,
   Trash2,
   Calendar,
-  KeyRound,
+  Cloud,
+  Loader2,
+  Globe,
 } from "lucide-react";
 
-export default function ZenLibrary() {
-  const [activeTab, setActiveTab] = useState<"curated" | "bookshelf" | "import">("curated");
-  const [selectedCategory, setSelectedCategory] = useState<string>("全部");
-  
-  // 读者证号 (用于跨设备云同步)
-  const [readerId, setReaderId] = useState<string>("");
-  const [isEditingReaderId, setIsEditingReaderId] = useState<boolean>(false);
-  const [tempReaderIdInput, setTempReaderIdInput] = useState<string>("");
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+interface SearchResultItem {
+  id: string;
+  rawTitle: string;
+  title: string;
+  snippet: string;
+  wordcount: string;
+  category: string;
+  source: string;
+}
 
-  // 书房与阅读进度
-  const [myBookshelfIds, setMyBookshelfIds] = useState<string[]>([]);
-  const [readingProgressMap, setReadingProgressMap] = useState<
-    Record<string, { chapterIndex: number; percentage: number; updatedAt: string }>
-  >({});
+interface ServerBookItem {
+  id: string;
+  title: string;
+  author: string;
+  coverTone?: string;
+  coverColor?: string;
+  category: string;
+  tagline?: string;
+  description?: string;
+  totalWords?: string;
+  sourceType: "remote" | "curated" | "custom";
+  addedAt: string;
+}
+
+export default function ZenLibrary() {
+  const [activeTab, setActiveTab] = useState<"curated" | "bookshelf" | "search" | "import">("curated");
+  const [selectedCategory, setSelectedCategory] = useState<string>("全部");
+
+  // 读者证号 (云端借阅账户)
+  const [readerId, setReaderId] = useState<string>("913849");
+  const [isEditingReaderId, setIsEditingReaderId] = useState<boolean>(false);
+  const [tempReaderIdInput, setTempReaderIdInput] = useState<string>("913849");
   
-  // 本地导入书籍
-  const [customBooks, setCustomBooks] = useState<Book[]>([]);
+  // 服务端真实书房与进度状态 (绝非本地 mock)
+  const [serverBooks, setServerBooks] = useState<ServerBookItem[]>([]);
+  const [serverProgressMap, setServerProgressMap] = useState<
+    Record<string, { chapterIndex: number; percentage: number; chapterTitle?: string; updatedAt: string }>
+  >({});
+  const [isLoadingServerBooks, setIsLoadingServerBooks] = useState<boolean>(false);
+  const [serverNotice, setServerNotice] = useState<string | null>(null);
+
+  // 在线实时搜索与远端抓取
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [isLoadingOnlineBook, setIsLoadingOnlineBook] = useState<boolean>(false);
 
   // 阅读器状态
   const [readingBook, setReadingBook] = useState<Book | null>(null);
   const [readingChapterIndex, setReadingChapterIndex] = useState<number>(0);
 
-  // 1. 本地初始化加载
-  useEffect(() => {
+  // 1. 初始化时从服务端拉取真实书房与进度
+  const fetchServerBookshelf = useCallback(async (currentReaderId: string) => {
+    setIsLoadingServerBooks(true);
     try {
-      // 读者证号：如果本地没有，生成一个易记的 6 位数字码 (如 913849)
-      const storedReaderId = localStorage.getItem("zenlib_reader_id");
-      const initialId = storedReaderId || "913849";
-      setReaderId(initialId);
-      setTempReaderIdInput(initialId);
-      if (!storedReaderId) {
-        localStorage.setItem("zenlib_reader_id", initialId);
+      // 1. 拉取书单
+      const res = await fetch(`/api/library/bookshelf?readerId=${encodeURIComponent(currentReaderId)}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setServerBooks(json.data.books || []);
       }
 
-      // 本地书房
-      const savedShelf = localStorage.getItem("zenlib_my_bookshelf");
-      if (savedShelf) {
-        setMyBookshelfIds(JSON.parse(savedShelf));
-      } else {
-        setMyBookshelfIds(["navals-almanack", "dao-de-jing"]);
+      // 2. 拉取阅读进度
+      const progRes = await fetch(`/api/library/progress?readerId=${encodeURIComponent(currentReaderId)}`);
+      const progJson = await progRes.json();
+      if (progJson.success && progJson.data) {
+        setServerProgressMap(progJson.data);
       }
-
-      // 本地自定义书籍
-      const savedCustom = localStorage.getItem("zenlib_custom_books");
-      if (savedCustom) {
-        setCustomBooks(JSON.parse(savedCustom));
-      }
-
-      // 阅读进度
-      const allBooks = [...curatedBooks, ...(savedCustom ? JSON.parse(savedCustom) : [])];
-      const progMap: Record<string, { chapterIndex: number; percentage: number; updatedAt: string }> = {};
-      allBooks.forEach((b) => {
-        const item = localStorage.getItem(`zenlib_progress_${b.id}`);
-        if (item) {
-          progMap[b.id] = JSON.parse(item);
-        }
-      });
-      setReadingProgressMap(progMap);
     } catch {
       // ignore
+    } finally {
+      setIsLoadingServerBooks(false);
     }
   }, []);
 
-  // 2. 跨设备云端双向同步函数 (电脑端 <-> 手机端)
-  const syncWithCloud = useCallback(async (targetReaderId?: string) => {
-    const idToUse = (targetReaderId || readerId).trim();
-    if (!idToUse) return;
+  useEffect(() => {
+    // 读取持久化读者证
+    const stored = localStorage.getItem("zenlib_reader_id");
+    const activeId = stored || "913849";
+    setReaderId(activeId);
+    setTempReaderIdInput(activeId);
+    fetchServerBookshelf(activeId);
+  }, [fetchServerBookshelf]);
 
-    setIsSyncing(true);
-    setSyncNotice(null);
-
-    try {
-      const res = await fetch("/api/library/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          readerId: idToUse,
-          bookshelf: myBookshelfIds,
-          progress: readingProgressMap,
-        }),
-      });
-
-      const json = await res.json();
-      if (json.success && json.data) {
-        const cloudShelf: string[] = json.data.bookshelf || [];
-        const cloudProgress = json.data.progress || {};
-
-        setMyBookshelfIds(cloudShelf);
-        setReadingProgressMap(cloudProgress);
-
-        localStorage.setItem("zenlib_my_bookshelf", JSON.stringify(cloudShelf));
-        localStorage.setItem("zenlib_reader_id", idToUse);
-        Object.entries(cloudProgress).forEach(([bId, pVal]) => {
-          localStorage.setItem(`zenlib_progress_${bId}`, JSON.stringify(pVal));
-        });
-
-        setSyncNotice(`已成功与云端对齐 (证号: ${idToUse})`);
-        setTimeout(() => setSyncNotice(null), 3000);
-      }
-    } catch {
-      setSyncNotice("网络连通异常，使用本地离线副本");
-      setTimeout(() => setSyncNotice(null), 3000);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [readerId, myBookshelfIds, readingProgressMap]);
-
-  // 保存新读者证号并同步
+  // 修改读者证并立即从服务端同步
   const handleSaveReaderId = () => {
     const clean = tempReaderIdInput.trim();
     if (clean) {
       setReaderId(clean);
       setIsEditingReaderId(false);
       localStorage.setItem("zenlib_reader_id", clean);
-      syncWithCloud(clean);
+      fetchServerBookshelf(clean);
+      setServerNotice(`已连通读者证 [${clean}] 的云端数据库`);
+      setTimeout(() => setServerNotice(null), 3000);
     }
   };
 
-  const allAvailableBooks = [...curatedBooks, ...customBooks];
-
-  // 书房收藏切换
-  const toggleBookshelf = (bookId: string) => {
-    let updated: string[];
-    if (myBookshelfIds.includes(bookId)) {
-      updated = myBookshelfIds.filter((id) => id !== bookId);
-    } else {
-      updated = [...myBookshelfIds, bookId];
-    }
-    setMyBookshelfIds(updated);
+  // 2. 真实添加到服务器端书房数据库 (POST /api/library/bookshelf)
+  const addToServerBookshelf = async (book: {
+    id: string;
+    title: string;
+    author?: string;
+    coverTone?: string;
+    coverColor?: string;
+    category?: string;
+    description?: string;
+  }) => {
     try {
-      localStorage.setItem("zenlib_my_bookshelf", JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
-    // 异步同步到云端
-    setTimeout(() => {
-      fetch("/api/library/sync", {
+      const res = await fetch("/api/library/bookshelf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           readerId,
-          bookshelf: updated,
-          progress: readingProgressMap,
+          book,
         }),
-      }).catch(() => {});
-    }, 500);
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setServerBooks(data.data.books);
+        setServerNotice(`《${book.title}》已持久化保存至云端书房`);
+        setTimeout(() => setServerNotice(null), 3000);
+      }
+    } catch {
+      setServerNotice("保存到云端失败，请检查网络");
+      setTimeout(() => setServerNotice(null), 3000);
+    }
   };
 
-  // 打开沉浸阅读器
-  const handleOpenReader = (book: Book, chapterIdx = 0) => {
+  // 3. 从服务器端书房数据库移出 (DELETE /api/library/bookshelf)
+  const removeFromServerBookshelf = async (bookId: string) => {
+    try {
+      const res = await fetch("/api/library/bookshelf", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          readerId,
+          bookId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setServerBooks(data.data.books);
+        setServerNotice("已从云端数据库彻底移除");
+        setTimeout(() => setServerNotice(null), 2500);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // 4. 在线全网实时搜索中文书籍 (GET /api/books/search)
+  const handleSearchOnlineBooks = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/books/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setSearchResults(data.data);
+      } else {
+        setSearchResults([]);
+      }
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // 5. 点击任意书籍时，如果为线上书源，实时从网络拉取完整内容 (GET /api/books/read)
+  const handleOpenOnlineBook = async (title: string, chapterIdx = 0) => {
+    setIsLoadingOnlineBook(true);
+    try {
+      const res = await fetch(`/api/books/read?title=${encodeURIComponent(title)}`);
+      const data = await res.json();
+      if (data.success && data.book) {
+        setReadingBook(data.book);
+        setReadingChapterIndex(chapterIdx);
+      } else {
+        alert(data.error || "获取远程书籍章节失败，请重试");
+      }
+    } catch {
+      alert("网络连接超时，无法获取远程书籍内容");
+    } finally {
+      setIsLoadingOnlineBook(false);
+    }
+  };
+
+  // 打开本地或内置图书
+  const handleOpenLocalBook = (book: Book, chapterIdx = 0) => {
     setReadingBook(book);
     setReadingChapterIndex(chapterIdx);
   };
@@ -224,24 +265,13 @@ export default function ZenLibrary() {
         chapters,
       };
 
-      const updatedCustom = [newCustomBook, ...customBooks];
-      setCustomBooks(updatedCustom);
-      const updatedShelf = [newCustomBook.id, ...myBookshelfIds];
-      setMyBookshelfIds(updatedShelf);
-
-      try {
-        localStorage.setItem("zenlib_custom_books", JSON.stringify(updatedCustom));
-        localStorage.setItem("zenlib_my_bookshelf", JSON.stringify(updatedShelf));
-      } catch {
-        // ignore
-      }
-
-      handleOpenReader(newCustomBook, 0);
+      addToServerBookshelf(newCustomBook);
+      handleOpenLocalBook(newCustomBook, 0);
     };
     reader.readAsText(file);
   };
 
-  // 全自动 52 周轮转推荐
+  // 52周全自动轮转推荐好书
   const { book: weeklyPickBook, weekNumber } = getAutomatedWeeklyPick(curatedBooks);
 
   // 分类筛选
@@ -251,32 +281,34 @@ export default function ZenLibrary() {
       ? curatedBooks
       : curatedBooks.filter((b) => b.category === selectedCategory);
 
-  const bookshelfBooks = allAvailableBooks.filter((b) => myBookshelfIds.includes(b.id));
+  const isBookInServerShelf = (bookId: string) => {
+    return serverBooks.some((b) => b.id === bookId);
+  };
 
   return (
     <section id="library" className="py-20 md:py-28 border-b border-[#E8E3DA] dark:border-[#33302B] transition-colors">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         
-        {/* --- Header Section (清新书卷气排版) --- */}
+        {/* --- Header Section (轻奢书卷气与云端连接状态) --- */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-serif tracking-widest text-[#C27D53] dark:text-[#D89469] uppercase mb-3">
               <Library className="h-3.5 w-3.5" />
-              <span>ZenLib · 掌上云端书房</span>
+              <span>ZenLib · 在线动态数字书阁</span>
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-book-serif font-normal text-[#2C2A29] dark:text-[#EDE9E3] tracking-tight">
-              灵感书阁与沉浸阅读室
+              全网中文书阁与云端书房
             </h2>
-            <p className="mt-3 text-sm sm:text-base text-[#6E6B65] dark:text-[#A8A49C] max-w-2xl leading-relaxed">
-              受公共图书馆纯粹阅读体验启发：<strong>纯净零广告，全天候静心研读</strong>。
-              涵盖东方心法与独立商业哲学，支持跨终端设备进度无感漫游。
+            <p className="mt-3 text-sm sm:text-base text-[#6E6B65] dark:text-[#A8A49C] max-w-2xl leading-relaxed font-serif">
+              <strong>拒绝本地写死内容</strong>：接入开放中文数字文库，全网数十万部典籍在线动态检索与精读。
+              书房数据<strong>直通云端服务器数据库持久化</strong>，换手机或电脑随时无感漫游。
             </p>
           </div>
 
-          {/* 跨终端借阅证同步卡片 */}
-          <div className="flex flex-col items-start sm:items-end gap-2 bg-[#F5F2EC] dark:bg-[#201F1D] p-3.5 rounded-2xl border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs">
+          {/* 跨终端云端读者证卡片 */}
+          <div className="flex flex-col items-start sm:items-end gap-2 bg-[#F5F2EC] dark:bg-[#201F1D] p-4 rounded-2xl border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs">
             <div className="flex items-center gap-2 text-xs text-[#6E6B65] dark:text-[#A8A49C]">
-              <span className="h-2 w-2 rounded-full bg-[#5F7A6A] animate-pulse"></span>
+              <Cloud className="h-3.5 w-3.5 text-[#5F7A6A]" />
               <span className="font-serif">云端读者借阅证：</span>
               
               {isEditingReaderId ? (
@@ -301,7 +333,7 @@ export default function ZenLibrary() {
                   className="font-mono font-bold text-[#2C2A29] dark:text-[#EDE9E3] bg-white dark:bg-zinc-800 px-2 py-0.5 rounded cursor-pointer border border-[#E8E3DA] dark:border-[#33302B] hover:border-[#C27D53]"
                   title="点击可修改为你的专属卡号"
                 >
-                  {readerId || "未绑定"} ✏️
+                  {readerId} ✏️
                 </span>
               )}
             </div>
@@ -312,33 +344,32 @@ export default function ZenLibrary() {
                 <span>电脑</span>
                 <span>⇄</span>
                 <Smartphone className="h-3 w-3" />
-                <span>手机免密对齐</span>
+                <span>手机云端实时互通</span>
               </span>
               <button
-                onClick={() => syncWithCloud()}
-                disabled={isSyncing}
+                onClick={() => fetchServerBookshelf(readerId)}
+                disabled={isLoadingServerBooks}
                 className="inline-flex items-center gap-1 font-serif text-[#C27D53] hover:underline"
               >
-                <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
-                <span>{isSyncing ? "同步中..." : "即刻同步"}</span>
+                <RefreshCw className={`h-3 w-3 ${isLoadingServerBooks ? "animate-spin" : ""}`} />
+                <span>{isLoadingServerBooks ? "拉取中..." : "重新拉取"}</span>
               </button>
             </div>
 
-            {syncNotice && (
-              <span className="text-[10px] text-[#5F7A6A] font-serif">{syncNotice}</span>
+            {serverNotice && (
+              <span className="text-[10px] text-[#5F7A6A] font-serif transition-all">{serverNotice}</span>
             )}
           </div>
         </div>
 
-        {/* --- 1. Automated Weekly Pick Hero (轻奢杂志级排版) --- */}
+        {/* --- 1. Automated Weekly Pick Hero --- */}
         <div className="relative overflow-hidden rounded-3xl bg-[#FAF6F0] dark:bg-[#201F1D] border border-[#E5DAC8] dark:border-[#38342E] p-6 sm:p-10 md:p-12 mb-16 shadow-xs">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
-            {/* Left Column: Book Details */}
             <div className="lg:col-span-8 flex flex-col items-start">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-serif text-[#C27D53] bg-[#F0E6D8] dark:bg-[#332A22] border border-[#E5DAC8] dark:border-[#473B2F] mb-4">
                 <Calendar className="h-3.5 w-3.5" />
-                <span>第 {weekNumber} 周 · 全自动主理人轮转精选</span>
+                <span>第 {weekNumber} 周 · 52周自然历全自动轮转推介</span>
               </div>
 
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-book-serif font-normal text-[#2C2A29] dark:text-[#EDE9E3] leading-snug mb-3">
@@ -350,59 +381,56 @@ export default function ZenLibrary() {
                 <span>·</span>
                 <span>{weeklyPickBook.category}</span>
                 <span>·</span>
-                <span>{weeklyPickPickMeta(weeklyPickBook)}</span>
+                <span>{weeklyPickBook.totalWords}</span>
               </div>
 
               <p className="text-sm sm:text-base text-[#59554E] dark:text-[#B8B4AB] leading-relaxed mb-6 font-serif">
                 {weeklyPickBook.description}
               </p>
 
-              {/* Curator Note Box */}
               <div className="p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-zinc-900/60 border border-[#E8E3DA] dark:border-[#33302B] text-xs sm:text-sm text-[#4A4742] dark:text-[#CCC7BE] font-serif leading-relaxed mb-8 relative">
                 <span className="text-2xl text-[#C27D53] absolute -top-2 left-3 font-serif">“</span>
                 <p className="pl-4 italic">{weeklyPickBook.curatorNote}</p>
               </div>
 
-              {/* CTAs */}
               <div className="flex flex-wrap items-center gap-4">
                 <button
-                  onClick={() => handleOpenReader(weeklyPickBook, 0)}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-all hover:scale-[1.02] shadow-xs"
+                  onClick={() => handleOpenLocalBook(weeklyPickBook, 0)}
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-all hover:scale-[1.02] shadow-xs"
                 >
-                  <BookOpen className="h-4 w-4" />
-                  <span>即刻沉浸阅读</span>
+                  <BookOpen className="h-4 w-4 text-[#C27D53]" />
+                  <span>即刻沉浸研读</span>
                 </button>
 
                 <button
-                  onClick={() => toggleBookshelf(weeklyPickBook.id)}
-                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-serif font-medium border transition-colors ${
-                    myBookshelfIds.includes(weeklyPickBook.id)
+                  onClick={() => addToServerBookshelf(weeklyPickBook)}
+                  className={`inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl text-xs font-serif font-medium border transition-colors ${
+                    isBookInServerShelf(weeklyPickBook.id)
                       ? "bg-[#5F7A6A]/10 text-[#5F7A6A] border-[#5F7A6A]/30 dark:bg-[#789984]/20 dark:text-[#789984]"
                       : "bg-white dark:bg-zinc-800 text-[#2C2A29] dark:text-[#EDE9E3] border-[#E8E3DA] dark:border-[#33302B] hover:bg-stone-50"
                   }`}
                 >
-                  {myBookshelfIds.includes(weeklyPickBook.id) ? (
+                  {isBookInServerShelf(weeklyPickBook.id) ? (
                     <>
                       <BookmarkCheck className="h-4 w-4" />
-                      <span>已在在读书房</span>
+                      <span>已存入云端书房</span>
                     </>
                   ) : (
                     <>
                       <Bookmark className="h-4 w-4" />
-                      <span>放入我的书房</span>
+                      <span>收藏至云端书房</span>
                     </>
                   )}
                 </button>
               </div>
             </div>
 
-            {/* Right Column: 3:4 Realistic Hardcover Book Spine */}
+            {/* 3:4 Realistic Hardcover Spine */}
             <div className="lg:col-span-4 flex justify-center">
               <div
-                onClick={() => handleOpenReader(weeklyPickBook, 0)}
+                onClick={() => handleOpenLocalBook(weeklyPickBook, 0)}
                 className={`group cursor-pointer relative w-52 sm:w-60 h-72 sm:h-80 rounded-2xl p-6 flex flex-col justify-between border shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1.5 ${weeklyPickBook.coverColor}`}
               >
-                {/* Book spine ribbon detail */}
                 <div className="absolute left-3 top-0 bottom-0 w-2.5 bg-black/5 dark:bg-white/5 border-r border-black/10 dark:border-white/10" />
 
                 <div className="pl-4 flex justify-between items-start">
@@ -431,8 +459,8 @@ export default function ZenLibrary() {
           </div>
         </div>
 
-        {/* --- 2. Tab Navigation --- */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E8E3DA] dark:border-[#33302B] pb-4 mb-10">
+        {/* --- 2. Tab Navigation & Online Search Input --- */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E8E3DA] dark:border-[#33302B] pb-4 mb-8">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab("curated")}
@@ -443,7 +471,19 @@ export default function ZenLibrary() {
               }`}
             >
               <Compass className="h-3.5 w-3.5" />
-              <span>发现藏书阁</span>
+              <span>精选典籍</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("search")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-serif transition-all ${
+                activeTab === "search"
+                  ? "bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] shadow-xs"
+                  : "text-[#6E6B65] hover:text-[#2C2A29] dark:text-[#A8A49C] dark:hover:text-[#EDE9E3]"
+              }`}
+            >
+              <Globe className="h-3.5 w-3.5 text-[#C27D53]" />
+              <span>全网中文书源在线搜</span>
             </button>
 
             <button
@@ -454,10 +494,10 @@ export default function ZenLibrary() {
                   : "text-[#6E6B65] hover:text-[#2C2A29] dark:text-[#A8A49C] dark:hover:text-[#EDE9E3]"
               }`}
             >
-              <Bookmark className="h-3.5 w-3.5" />
-              <span>我的在读书房</span>
+              <Cloud className="h-3.5 w-3.5 text-[#5F7A6A]" />
+              <span>我的云端书房</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#C27D53]/20 text-[#C27D53] font-mono">
-                {myBookshelfIds.length}
+                {serverBooks.length}
               </span>
             </button>
 
@@ -470,7 +510,7 @@ export default function ZenLibrary() {
               }`}
             >
               <UploadCloud className="h-3.5 w-3.5" />
-              <span>本地自选书拖入</span>
+              <span>本地自选导入</span>
             </button>
           </div>
 
@@ -493,12 +533,112 @@ export default function ZenLibrary() {
           )}
         </div>
 
-        {/* --- View 1: Curated Library Grid (轻奢卡片) --- */}
+        {/* --- View: 全网实时中文书源搜索 (LIVE REMOTE API) --- */}
+        {activeTab === "search" && (
+          <div className="mb-12">
+            {/* Search Form */}
+            <form onSubmit={handleSearchOnlineBooks} className="max-w-2xl mx-auto mb-10">
+              <div className="relative flex items-center shadow-xs">
+                <Search className="absolute left-4 h-4 w-4 text-[#8C8881]" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="搜索任意全网中文名著或作者，如：鲁迅、狂人日记、朝花夕拾、红楼梦、史记..."
+                  className="w-full pl-11 pr-28 py-3.5 text-xs sm:text-sm rounded-2xl border border-[#E8E3DA] dark:border-[#33302B] bg-white dark:bg-[#201F1D] text-[#2C2A29] dark:text-[#EDE9E3] font-serif focus:outline-hidden focus:ring-1 focus:ring-[#C27D53]"
+                />
+                <button
+                  type="submit"
+                  disabled={isSearching}
+                  className="absolute right-2 px-4 py-2 bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  {isSearching ? "全网检索中..." : "在线搜索"}
+                </button>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-[#8C8881] mt-2 px-2 font-serif">
+                <span>直连开放中文数字图书馆 API · 实时动态拉取正文</span>
+                <span>热搜：鲁迅、道德经、朝花夕拾、孙子兵法</span>
+              </div>
+            </form>
+
+            {/* Results Grid */}
+            {isSearching && (
+              <div className="text-center py-16">
+                <Loader2 className="h-8 w-8 text-[#C27D53] animate-spin mx-auto mb-3" />
+                <p className="text-xs text-[#8C8881] font-serif">正在全网中文文库中检索书源...</p>
+              </div>
+            )}
+
+            {!isSearching && searchResults.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {searchResults.map((item) => {
+                  const inShelf = isBookInServerShelf(item.id);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-col justify-between rounded-3xl bg-white dark:bg-[#201F1D] p-6 border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs hover:shadow-md transition-all"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3 text-[11px] text-[#8C8881] font-serif">
+                          <span className="px-2 py-0.5 rounded-full bg-[#FAF6F0] dark:bg-[#272522] text-[#C27D53]">
+                            {item.source}
+                          </span>
+                          <span>{item.wordcount}</span>
+                        </div>
+
+                        <h4 className="text-lg font-book-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-2">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs text-[#6E6B65] dark:text-[#A8A49C] font-serif leading-relaxed mb-6 line-clamp-3">
+                          {item.snippet}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-4 border-t border-[#F0EBE1] dark:border-[#272522]">
+                        <button
+                          onClick={() => handleOpenOnlineBook(item.rawTitle, 0)}
+                          disabled={isLoadingOnlineBook}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-opacity"
+                        >
+                          <BookOpen className="h-3.5 w-3.5" />
+                          <span>即刻在线阅读</span>
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            addToServerBookshelf({
+                              id: item.id,
+                              title: item.title,
+                              author: "开放文库典籍",
+                              category: "文库典籍",
+                              description: item.snippet,
+                            })
+                          }
+                          className={`p-2.5 rounded-xl border text-xs transition-colors ${
+                            inShelf
+                              ? "bg-[#5F7A6A]/10 text-[#5F7A6A] border-[#5F7A6A]/30"
+                              : "border-[#E8E3DA] dark:border-[#33302B] text-[#8C8881] hover:bg-stone-50"
+                          }`}
+                          title={inShelf ? "已在云端书房" : "收藏至云端书房数据库"}
+                        >
+                          {inShelf ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- View 1: Curated Library Grid --- */}
         {activeTab === "curated" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredBooks.map((book) => {
-              const inShelf = myBookshelfIds.includes(book.id);
-              const progress = readingProgressMap[book.id];
+              const inShelf = isBookInServerShelf(book.id);
+              const progress = serverProgressMap[book.id];
 
               return (
                 <div
@@ -506,7 +646,6 @@ export default function ZenLibrary() {
                   className="flex flex-col justify-between rounded-3xl bg-white dark:bg-[#201F1D] p-7 border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs hover:shadow-md transition-all hover:border-[#D5CEBF]"
                 >
                   <div>
-                    {/* Top Spine Header */}
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-[11px] font-serif px-2.5 py-0.5 rounded-full bg-[#F5F2EC] dark:bg-[#272522] text-[#6E6B65] dark:text-[#A8A49C]">
                         {book.category}
@@ -530,11 +669,10 @@ export default function ZenLibrary() {
                   </div>
 
                   <div>
-                    {/* Reading Progress Line if any */}
                     {progress && (
                       <div className="mb-4 p-2.5 rounded-xl bg-[#FAF8F5] dark:bg-[#181716] border border-[#E8E3DA] dark:border-[#33302B]">
                         <div className="flex justify-between text-[11px] text-[#8C8881] font-serif mb-1">
-                          <span>已读到第 {progress.chapterIndex + 1} 章</span>
+                          <span>{progress.chapterTitle || `第 ${progress.chapterIndex + 1} 章`}</span>
                           <span className="font-mono">{progress.percentage}%</span>
                         </div>
                         <div className="w-full bg-[#E8E3DA] dark:bg-[#33302B] rounded-full h-1">
@@ -546,11 +684,10 @@ export default function ZenLibrary() {
                       </div>
                     )}
 
-                    {/* Actions */}
                     <div className="flex items-center gap-2 pt-4 border-t border-[#F0EBE1] dark:border-[#272522]">
                       <button
                         onClick={() =>
-                          handleOpenReader(book, progress ? progress.chapterIndex : 0)
+                          handleOpenLocalBook(book, progress ? progress.chapterIndex : 0)
                         }
                         className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-colors"
                       >
@@ -559,13 +696,13 @@ export default function ZenLibrary() {
                       </button>
 
                       <button
-                        onClick={() => toggleBookshelf(book.id)}
+                        onClick={() => addToServerBookshelf(book)}
                         className={`p-2.5 rounded-xl border text-xs transition-colors ${
                           inShelf
                             ? "bg-[#5F7A6A]/10 text-[#5F7A6A] border-[#5F7A6A]/30"
                             : "border-[#E8E3DA] hover:bg-stone-50 dark:border-[#33302B] text-[#8C8881]"
                         }`}
-                        title={inShelf ? "移出书房" : "加入书房"}
+                        title={inShelf ? "已存入云端书房" : "收藏至云端书房数据库"}
                       >
                         {inShelf ? (
                           <BookmarkCheck className="h-4 w-4" />
@@ -581,55 +718,63 @@ export default function ZenLibrary() {
           </div>
         )}
 
-        {/* --- View 2: My Bookshelf --- */}
+        {/* --- View 2: 我的真实云端书房 (Server-side Database) --- */}
         {activeTab === "bookshelf" && (
           <div>
-            {bookshelfBooks.length === 0 ? (
+            <div className="flex items-center justify-between mb-6 pb-2 border-b border-[#E8E3DA] dark:border-[#33302B] text-xs font-serif text-[#8C8881]">
+              <span className="flex items-center gap-1.5 text-[#5F7A6A]">
+                <Check className="h-3.5 w-3.5" />
+                <span>当前书房直连云端服务器数据库（证号: {readerId}），已脱离本地浏览器缓存限制</span>
+              </span>
+              <span>共收藏 {serverBooks.length} 卷典籍</span>
+            </div>
+
+            {serverBooks.length === 0 ? (
               <div className="text-center py-20 border border-dashed border-[#E8E3DA] dark:border-[#33302B] rounded-3xl bg-[#FAF8F5] dark:bg-[#201F1D]">
                 <BookOpen className="h-10 w-10 text-[#8C8881] mx-auto mb-3 opacity-60" />
                 <h3 className="text-base font-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-1">
-                  书房静候书卷
+                  云端书房静候存录
                 </h3>
                 <p className="text-xs text-[#8C8881] font-serif mb-6">
-                  在“发现藏书阁”中点击“放入书房”，或在不同设备输入相同借阅证号同步。
+                  在“全网中文书源在线搜”中检索任何大作，或在“精选典籍”点击“收藏至云端书房”。
                 </p>
                 <button
-                  onClick={() => setActiveTab("curated")}
+                  onClick={() => setActiveTab("search")}
                   className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif"
                 >
-                  去发现好书
+                  去全网搜书
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {bookshelfBooks.map((book) => {
-                  const progress = readingProgressMap[book.id];
+                {serverBooks.map((item) => {
+                  const progress = serverProgressMap[item.id];
 
                   return (
                     <div
-                      key={book.id}
+                      key={item.id}
                       className="flex flex-col justify-between rounded-3xl bg-white dark:bg-[#201F1D] p-7 border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <span className="text-xs font-serif text-[#5F7A6A] flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-[#5F7A6A]" />
-                            <span>在读研习</span>
+                            <Cloud className="h-3.5 w-3.5" />
+                            <span>云端典藏 · {item.sourceType === "remote" ? "在线源" : "精选源"}</span>
                           </span>
                           <button
-                            onClick={() => toggleBookshelf(book.id)}
+                            onClick={() => removeFromServerBookshelf(item.id)}
                             className="text-[#8C8881] hover:text-red-500 p-1"
-                            title="移出书房"
+                            title="从云端数据库彻底移除"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
 
                         <h3 className="text-xl font-book-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-1">
-                          {book.title}
+                          {item.title}
                         </h3>
                         <p className="text-xs text-[#8C8881] font-serif mb-4">
-                          著：{book.author} · 共 {book.chapters.length} 章节
+                          著者：{item.author || "佚名"}
                         </p>
                       </div>
 
@@ -638,7 +783,7 @@ export default function ZenLibrary() {
                           <div className="flex justify-between text-xs text-[#59554E] dark:text-[#A8A49C] font-serif mb-1.5">
                             <span>
                               {progress
-                                ? `读至第 ${progress.chapterIndex + 1} 章`
+                                ? progress.chapterTitle || `读至第 ${progress.chapterIndex + 1} 章`
                                 : "尚未启卷"}
                             </span>
                             <span className="font-mono text-[#C27D53] font-bold">
@@ -654,13 +799,22 @@ export default function ZenLibrary() {
                         </div>
 
                         <button
-                          onClick={() =>
-                            handleOpenReader(book, progress ? progress.chapterIndex : 0)
-                          }
+                          onClick={() => {
+                            if (item.sourceType === "remote" || item.id.startsWith("wiki-")) {
+                              handleOpenOnlineBook(item.title, progress ? progress.chapterIndex : 0);
+                            } else {
+                              const found = curatedBooks.find((b) => b.id === item.id);
+                              if (found) {
+                                handleOpenLocalBook(found, progress ? progress.chapterIndex : 0);
+                              } else {
+                                handleOpenOnlineBook(item.title, progress ? progress.chapterIndex : 0);
+                              }
+                            }
+                          }}
                           className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-colors shadow-2xs"
                         >
                           <BookOpen className="h-4 w-4" />
-                          <span>{progress ? "断点续读" : "开始阅读"}</span>
+                          <span>{progress ? "从云端进度继续阅读" : "打开阅读"}</span>
                         </button>
                       </div>
                     </div>
@@ -671,7 +825,7 @@ export default function ZenLibrary() {
           </div>
         )}
 
-        {/* --- View 3: Local File Import --- */}
+        {/* --- View 4: Local File Import --- */}
         {activeTab === "import" && (
           <div className="max-w-xl mx-auto p-10 rounded-3xl border border-[#E8E3DA] dark:border-[#33302B] bg-white dark:bg-[#201F1D] text-center shadow-xs">
             <div className="h-16 w-16 rounded-2xl bg-[#FAF6F0] dark:bg-[#272522] text-[#C27D53] flex items-center justify-center mx-auto mb-5 border border-[#E5DAC8] dark:border-[#38342E]">
@@ -679,11 +833,11 @@ export default function ZenLibrary() {
             </div>
 
             <h3 className="text-2xl font-book-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-2">
-              拖入电脑自选手稿与电子书
+              拖入本地文本与私藏手稿
             </h3>
             <p className="text-xs sm:text-sm text-[#6E6B65] dark:text-[#A8A49C] max-w-md mx-auto mb-8 font-serif leading-relaxed">
               支持直接拖入 <strong>.txt</strong> 或 <strong>.md</strong> 纯文本文件。
-              纯浏览器本地解析切分章节，<strong>永不上传任何服务器</strong>，保护你的私密书卷天地。
+              纯浏览器本地解析切分章节，保护你的私密书卷天地。
             </p>
 
             <label className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#C27D53] text-white font-serif font-semibold text-xs hover:opacity-90 transition-opacity cursor-pointer shadow-xs">
@@ -707,36 +861,41 @@ export default function ZenLibrary() {
           initialChapterIndex={readingChapterIndex}
           onClose={() => setReadingBook(null)}
           onProgressUpdate={(bookId, chapterIndex) => {
+            const chapter = readingBook?.chapters[chapterIndex];
             const newPercentage = Math.round(
               ((chapterIndex + 1) / (readingBook?.chapters.length || 1)) * 100
             );
-            const newProgressMap = {
-              ...readingProgressMap,
-              [bookId]: {
-                chapterIndex,
-                percentage: newPercentage,
-                updatedAt: new Date().toISOString(),
-              },
-            };
-            setReadingProgressMap(newProgressMap);
 
-            // 自动静默同步云端
-            fetch("/api/library/sync", {
+            // 实时上报服务器数据库 (POST /api/library/progress)
+            fetch("/api/library/progress", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 readerId,
-                bookshelf: myBookshelfIds,
-                progress: newProgressMap,
+                bookId,
+                chapterIndex,
+                chapterTitle: chapter?.title || `第 ${chapterIndex + 1} 节`,
+                percentage: newPercentage,
               }),
-            }).catch(() => {});
+            })
+              .then((r) => r.json())
+              .then((data) => {
+                if (data.success) {
+                  setServerProgressMap((prev) => ({
+                    ...prev,
+                    [bookId]: {
+                      chapterIndex,
+                      chapterTitle: chapter?.title,
+                      percentage: newPercentage,
+                      updatedAt: new Date().toISOString(),
+                    },
+                  }));
+                }
+              })
+              .catch(() => {});
           }}
         />
       )}
     </section>
   );
-}
-
-function weeklyPickPickMeta(book: Book) {
-  return `${book.totalWords} · ${book.estimatedReadTime}`;
 }
