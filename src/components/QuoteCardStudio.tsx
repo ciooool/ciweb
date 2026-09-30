@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { Sparkles, Copy, Check, RefreshCw, Share2, Quote, BookOpen } from "lucide-react";
+import React, { useState } from "react";
+import { Sparkles, Copy, Check, Quote, BookOpen } from "lucide-react";
 
 interface PresetQuote {
   quote: string;
@@ -37,16 +37,14 @@ const sampleQuotes: PresetQuote[] = [
   },
 ];
 
-type CardTheme = "obsidian" | "paper" | "aurora";
+type CardTheme = "xuan" | "inkstone" | "tea";
 
 export default function QuoteCardStudio() {
   const [quoteText, setQuoteText] = useState(sampleQuotes[0].quote);
   const [author, setAuthor] = useState(sampleQuotes[0].author);
   const [source, setSource] = useState(sampleQuotes[0].source);
-  const [theme, setTheme] = useState<CardTheme>("obsidian");
+  const [theme, setTheme] = useState<CardTheme>("xuan");
   const [copied, setCopied] = useState(false);
-
-  const cardRef = useRef<HTMLDivElement>(null);
 
   const handleSelectPreset = (p: PresetQuote) => {
     setQuoteText(p.quote);
@@ -55,7 +53,7 @@ export default function QuoteCardStudio() {
   };
 
   const handleCopyText = () => {
-    const formatted = `「${quoteText}」\n—— ${author} · ${source}\n(来自 ciooool 的数字书房: ciooool.is-a.dev)`;
+    const formatted = `「${quoteText}」\n—— ${author} · ${source}\n(收录于 Ciooool 的云端书阁: ciooool.is-a.dev)`;
     navigator.clipboard.writeText(formatted);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -65,61 +63,62 @@ export default function QuoteCardStudio() {
     CardTheme,
     { cardBg: string; text: string; subText: string; border: string; quoteIcon: string }
   > = {
-    obsidian: {
-      cardBg: "bg-zinc-950",
-      text: "text-zinc-100",
-      subText: "text-zinc-400",
-      border: "border-zinc-800 shadow-2xl",
-      quoteIcon: "text-zinc-700",
+    xuan: {
+      cardBg: "bg-[#FAF6F0]",
+      text: "text-[#2B2A27]",
+      subText: "text-[#7C766C]",
+      border: "border-[#E5DAC8] shadow-md",
+      quoteIcon: "text-[#D8CDBC]",
     },
-    paper: {
-      cardBg: "bg-[#fbf7ee]",
-      text: "text-[#3c3836]",
-      subText: "text-[#7c6f64]",
-      border: "border-[#ebdccb] shadow-xl",
-      quoteIcon: "text-[#d5c4a1]",
+    inkstone: {
+      cardBg: "bg-[#1C1B1A]",
+      text: "text-[#EDE8E1]",
+      subText: "text-[#969188]",
+      border: "border-[#33302B] shadow-xl",
+      quoteIcon: "text-[#3D3A35]",
     },
-    aurora: {
-      cardBg: "bg-gradient-to-br from-indigo-950 via-zinc-900 to-purple-950",
-      text: "text-white",
-      subText: "text-indigo-200",
-      border: "border-indigo-500/30 shadow-2xl",
-      quoteIcon: "text-indigo-400/40",
+    tea: {
+      cardBg: "bg-[#F0F4F0]",
+      text: "text-[#2F3E32]",
+      subText: "text-[#627766]",
+      border: "border-[#D1E0D3] shadow-md",
+      quoteIcon: "text-[#C1D4C3]",
     },
   };
 
   const currentStyle = themeStyles[theme];
 
   return (
-    <section className="py-16 md:py-20 border-b border-zinc-200/60 dark:border-zinc-800/60">
+    <section className="py-20 md:py-24 border-b border-[#E8E3DA] dark:border-[#33302B] transition-colors">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 mb-3">
+        
+        {/* Header */}
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-serif bg-[#F5F2EC] text-[#C27D53] dark:bg-[#201F1D] dark:text-[#D89469] border border-[#E8E3DA] dark:border-[#33302B] mb-3">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>自研专属微工具 · 社交卡片工坊</span>
+            <span>自研专属工具 · 灵感金句卡片工坊</span>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-            QuoteCraft · 灵感金句卡片工坊
+          <h2 className="text-3xl sm:text-4xl font-book-serif font-normal text-[#2C2A29] dark:text-[#EDE9E3]">
+            QuoteCraft 灵感卡片工坊
           </h2>
-          <p className="mt-2 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
-            看到触动心弦的句子？一键生成杂志级高逼格排版卡片，自带社交分享美感与你的个人品牌印记。
+          <p className="mt-2 text-sm sm:text-base text-[#6E6B65] dark:text-[#A8A49C] font-serif leading-relaxed">
+            研读至深处的刹那触动？一键化为杂志级排版卡片，自带个人独立品牌水印，静心分享。
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Editor Controls (5 cols) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          {/* Left Column: Form (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
-            {/* Quick Presets */}
             <div>
-              <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-2">
-                点击快速填入精选金句：
+              <label className="text-xs font-serif text-[#6E6B65] dark:text-[#A8A49C] block mb-2">
+                点击快速填入精选名句：
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {sampleQuotes.map((sq, i) => (
                   <button
                     key={i}
                     onClick={() => handleSelectPreset(sq)}
-                    className="text-[11px] px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors truncate max-w-[200px]"
+                    className="text-[11px] font-serif px-3 py-1 rounded-xl border border-[#E8E3DA] dark:border-[#33302B] bg-white dark:bg-[#201F1D] text-[#59554E] dark:text-[#CCC7BE] hover:border-[#C27D53] transition-colors truncate max-w-[190px]"
                   >
                     {sq.source}
                   </button>
@@ -127,94 +126,92 @@ export default function QuoteCardStudio() {
               </div>
             </div>
 
-            {/* Input Form */}
             <div>
-              <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-1">
+              <label className="text-xs font-serif text-[#6E6B65] dark:text-[#A8A49C] block mb-1">
                 金句内容 (Quote)
               </label>
               <textarea
                 value={quoteText}
                 onChange={(e) => setQuoteText(e.target.value)}
                 rows={4}
-                className="w-full text-xs p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-purple-500 resize-none font-serif leading-relaxed"
+                className="w-full text-xs p-3 rounded-2xl border border-[#E8E3DA] dark:border-[#33302B] bg-white dark:bg-[#201F1D] text-[#2C2A29] dark:text-[#EDE9E3] font-serif leading-relaxed resize-none focus:outline-hidden focus:ring-1 focus:ring-[#C27D53]"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-1">
-                  作者 (Author)
+                <label className="text-xs font-serif text-[#6E6B65] dark:text-[#A8A49C] block mb-1">
+                  著者 (Author)
                 </label>
                 <input
                   type="text"
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E8E3DA] dark:border-[#33302B] bg-white dark:bg-[#201F1D] text-[#2C2A29] dark:text-[#EDE9E3] font-serif"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-1">
-                  出处 / 书籍 (Source)
+                <label className="text-xs font-serif text-[#6E6B65] dark:text-[#A8A49C] block mb-1">
+                  出处 / 篇章 (Source)
                 </label>
                 <input
                   type="text"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E8E3DA] dark:border-[#33302B] bg-white dark:bg-[#201F1D] text-[#2C2A29] dark:text-[#EDE9E3] font-serif"
                 />
               </div>
             </div>
 
             {/* Theme Picker */}
             <div>
-              <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-2">
-                选择视觉风格 (Theme)
+              <label className="text-xs font-serif text-[#6E6B65] dark:text-[#A8A49C] block mb-2">
+                选择风雅纸质 (Theme)
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
-                  onClick={() => setTheme("obsidian")}
-                  className={`py-2 px-3 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-all ${
-                    theme === "obsidian"
-                      ? "bg-zinc-900 text-white border-zinc-700 shadow-sm"
-                      : "bg-white text-zinc-700 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-800"
+                  onClick={() => setTheme("xuan")}
+                  className={`py-2 px-3 rounded-xl text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
+                    theme === "xuan"
+                      ? "bg-[#FAF6F0] text-[#2B2A27] border-[#C27D53] font-bold shadow-2xs"
+                      : "bg-white dark:bg-[#201F1D] text-[#6E6B65] border-[#E8E3DA] dark:border-[#33302B]"
                   }`}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-900 border border-zinc-600"></span>
-                  <span>曜石黑</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#FAF6F0] border border-[#C27D53]"></span>
+                  <span>宣纸温白</span>
                 </button>
 
                 <button
-                  onClick={() => setTheme("paper")}
-                  className={`py-2 px-3 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-all ${
-                    theme === "paper"
-                      ? "bg-[#fbf7ee] text-[#3c3836] border-[#d5c4a1] shadow-sm font-bold"
-                      : "bg-white text-zinc-700 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-800"
+                  onClick={() => setTheme("inkstone")}
+                  className={`py-2 px-3 rounded-xl text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
+                    theme === "inkstone"
+                      ? "bg-[#1C1B1A] text-white border-zinc-500 font-bold shadow-2xs"
+                      : "bg-white dark:bg-[#201F1D] text-[#6E6B65] border-[#E8E3DA] dark:border-[#33302B]"
                   }`}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#fbf7ee] border border-amber-300"></span>
-                  <span>羊皮纸</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#1C1B1A] border border-zinc-400"></span>
+                  <span>深砚夜读</span>
                 </button>
 
                 <button
-                  onClick={() => setTheme("aurora")}
-                  className={`py-2 px-3 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-all ${
-                    theme === "aurora"
-                      ? "bg-indigo-950 text-white border-indigo-400 shadow-sm"
-                      : "bg-white text-zinc-700 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-800"
+                  onClick={() => setTheme("tea")}
+                  className={`py-2 px-3 rounded-xl text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
+                    theme === "tea"
+                      ? "bg-[#F0F4F0] text-[#2F3E32] border-[#5F7A6A] font-bold shadow-2xs"
+                      : "bg-white dark:bg-[#201F1D] text-[#6E6B65] border-[#E8E3DA] dark:border-[#33302B]"
                   }`}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"></span>
-                  <span>极光紫</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#F0F4F0] border border-[#5F7A6A]"></span>
+                  <span>雨后春茶</span>
                 </button>
               </div>
             </div>
 
-            {/* Copy CTA */}
             <div className="pt-2">
               <button
                 onClick={handleCopyText}
-                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 transition-colors shadow-sm"
+                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-opacity shadow-xs"
               >
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 <span>{copied ? "已复制到剪贴板！" : "复制金句卡片文案"}</span>
@@ -222,44 +219,37 @@ export default function QuoteCardStudio() {
             </div>
           </div>
 
-          {/* Right Column: Live Card Preview (7 cols) */}
+          {/* Right Column: Card Preview (7 cols) */}
           <div className="lg:col-span-7 flex flex-col items-center justify-center">
-            <div className="text-xs font-mono text-zinc-400 mb-2 flex items-center gap-1">
-              <span>Card Live Preview</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+            <div className="text-[11px] font-serif text-[#8C8881] mb-2 flex items-center gap-1.5">
+              <span>实时卡片排版预览</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#C27D53]"></span>
             </div>
 
-            {/* The Actual Rendered Card */}
             <div
-              ref={cardRef}
-              className={`w-full max-w-lg rounded-3xl p-8 sm:p-10 border ${currentStyle.border} ${currentStyle.cardBg} ${currentStyle.text} relative overflow-hidden transition-all duration-300 flex flex-col justify-between min-h-[300px] select-text`}
+              className={`w-full max-w-lg rounded-3xl p-8 sm:p-12 border ${currentStyle.border} ${currentStyle.cardBg} ${currentStyle.text} relative overflow-hidden transition-all duration-300 flex flex-col justify-between min-h-[320px] select-text`}
             >
-              {/* Background ambient quotation icon */}
-              <div
-                className={`absolute top-4 right-4 ${currentStyle.quoteIcon} pointer-events-none`}
-              >
-                <Quote className="h-16 w-16 opacity-30" />
+              <div className={`absolute top-4 right-5 ${currentStyle.quoteIcon} pointer-events-none`}>
+                <Quote className="h-14 w-14 opacity-40" />
               </div>
 
-              {/* Quote Content */}
-              <div className="relative z-10 pt-2">
-                <p className="text-base sm:text-lg font-serif tracking-wide leading-relaxed mb-8 whitespace-pre-line">
+              <div className="relative z-10 pt-3">
+                <p className="text-base sm:text-xl font-book-serif leading-relaxed tracking-wide mb-10 whitespace-pre-line">
                   “{quoteText}”
                 </p>
               </div>
 
-              {/* Card Footer: Author + Source + Personal Branding */}
               <div className="relative z-10 pt-4 border-t border-current/15 flex items-end justify-between">
                 <div>
-                  <div className="font-bold text-sm tracking-tight">{author}</div>
-                  <div className={`text-xs ${currentStyle.subText} mt-0.5`}>{source}</div>
+                  <div className="font-book-serif font-bold text-sm tracking-tight">{author}</div>
+                  <div className={`text-xs ${currentStyle.subText} font-serif mt-0.5`}>{source}</div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[10px] font-mono tracking-wider opacity-60">
-                    CIOOOOL DIGITAL LIBRARY
+                  <div className="text-[10px] font-mono tracking-widest opacity-60">
+                    CIOOOOL DIGITAL ATELIER
                   </div>
-                  <div className="text-[10px] font-mono font-medium text-purple-400">
+                  <div className="text-[10px] font-serif font-semibold text-[#C27D53]">
                     ciooool.is-a.dev
                   </div>
                 </div>

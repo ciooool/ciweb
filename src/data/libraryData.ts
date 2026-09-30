@@ -1,50 +1,72 @@
 export interface BookChapter {
   id: string;
   title: string;
-  content: string; // Markdown / readable text
+  content: string;
 }
 
 export interface Book {
   id: string;
   title: string;
   author: string;
-  coverGradient: string;
-  category: "哲学与智慧" | "独立开发与商业" | "工程心法" | "人文沉思";
+  year?: string;
+  coverTone: "sage" | "amber" | "slate" | "terracotta" | "indigo";
+  coverColor: string; // Tailwind background style
+  category: "东方至道" | "商业与杠杆" | "工匠技艺" | "精神林泉" | "认知模型";
   tagline: string;
   description: string;
-  rating: number; // 4.8, 5.0 etc.
+  curatorNote: string;
+  rating: number;
   totalWords: string;
   estimatedReadTime: string;
-  isWeeklyPick?: boolean;
-  curatorNote?: string;
   chapters: BookChapter[];
+}
+
+// 自动根据自然年中的周数（第 1 周 ~ 第 52 周）计算本周推荐图书
+export function getCurrentWeekOfYear(): number {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const diff = now.getTime() - start.getTime() + (start.getTimezoneOffset() - now.getTimezoneOffset()) * 60000;
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+  return Math.min(Math.max(Math.ceil((dayOfYear + start.getDay() + 1) / 7), 1), 52);
+}
+
+export function getAutomatedWeeklyPick(books: Book[]): { book: Book; weekNumber: number } {
+  const weekNumber = getCurrentWeekOfYear();
+  // 52周无缝轮转映射
+  const selectedIndex = (weekNumber - 1) % books.length;
+  return {
+    book: books[selectedIndex] || books[0],
+    weekNumber,
+  };
 }
 
 export const curatedBooks: Book[] = [
   {
     id: "navals-almanack",
-    title: "纳瓦尔宝典：财富与幸福指南",
+    title: "纳瓦尔宝典：财富与自由的微观模型",
     author: "埃里克·乔根森 / 纳瓦尔·拉维坎特",
-    coverGradient: "from-blue-600 via-indigo-600 to-purple-800",
-    category: "独立开发与商业",
-    tagline: "把自己产品化，用代码与产品打造不睡觉的杠杆",
+    year: "2020",
+    coverTone: "amber",
+    coverColor: "bg-[#F3EDE2] text-[#8C5D39] border-[#E5DAC8]",
+    category: "商业与杠杆",
+    tagline: "把自己产品化，用代码构建无需他人许可的绝对杠杆",
     description:
-      "硅谷知名投资人、AngelList 创始人纳瓦尔的人生智慧合集。深度拆解程序员如何利用专长、杠杆与心智模型，摆脱时间出卖模式，迈向真正的独立自由。",
-    rating: 4.9,
-    totalWords: "约 3.2 万字",
-    estimatedReadTime: "45 分钟精读",
-    isWeeklyPick: true,
+      "一部写给现代知识工作者的清醒之书。纳瓦尔剥离掉所有空洞的鸡汤，以第一性原理揭示：程序员如何摆脱单一出卖劳动力的时间陷阱，通过自主构建的软件产品获得真正的个人自由。",
     curatorNote:
-      "【主理人导读】：每一个不想一辈子当螺丝钉的程序员都必读的书。纳瓦尔指出了互联网时代的终极真相——代码是边际成本为零的绝对杠杆。当你熟练掌握全栈技术时，你的产出不再受制于工作时长。",
+      "“在软件时代，代码是世界上最民主、最具有放大效应的杠杆。计算机从不关心你的出身或学历。你写下的每一款实用工具，都是在为你的未来铸造长效资产。”",
+    rating: 4.9,
+    totalWords: "精粹 3.2 万字",
+    estimatedReadTime: "约 45 分钟",
     chapters: [
       {
         id: "ch-1",
         title: "第一章：积累财富不是靠运气，而是靠杠杆",
         content: `### 1. 追求财富，而不是金钱或地位
 
-金钱是我们转移财富的方式；地位是你在社会等级体系中的位置；而**财富**，是拥有在睡觉时也能为你赚钱的资产。
+金钱是我们转移财富的方式；地位是你在社会等级体系中的位置；而**财富**，是拥有在睡觉时也能为你运转的资产。
 
-在现代社会，财富是通过出租你的时间换不来的。如果你按照工作时长领薪水，那么只要你停下来，收入就会立刻中断。
+在现代社会，财富是通过单纯出租你的时间换不来的。如果你按照工作时长领薪水，那么只要你停下来，收入就会立刻中断。
 
 要获得真正的财务自主，你必须拥有**资产的所有权**——一家公司的股份、知识产权、或者你自主构建运行的软件产品。
 
@@ -88,7 +110,7 @@ export const curatedBooks: Book[] = [
 
 巴菲特一年只做两三次重要决策，但他能成为全球顶尖的投资者。作为独立开发者，选对一个真正解决小痛点的切入点，远比闷头写三个月没人要的庞大系统重要一百倍。
 
-### 2. 五条核心思维模型
+### 2. 四条极简思维法则
 
 1. **第一性原理**：剥离所有类比和表面现象，回到事物最本质的基础事实进行推导。
 2. **极简主义**：如无必要，勿增实体。代码越少，Bug 越少；业务流越简，转化率越高。
@@ -99,19 +121,20 @@ export const curatedBooks: Book[] = [
   },
   {
     id: "dao-de-jing",
-    title: "道德经：东方至道与系统哲学",
+    title: "道德经：东方至道与系统架构哲学",
     author: "老子（李耳）",
-    coverGradient: "from-emerald-700 via-teal-800 to-zinc-900",
-    category: "哲学与智慧",
-    tagline: "大音希声，大象无形。软件架构最高境界与人生静笃心法",
+    year: "春秋",
+    coverTone: "sage",
+    coverColor: "bg-[#EAF0EB] text-[#42614B] border-[#D3E0D5]",
+    category: "东方至道",
+    tagline: "大音希声，大象无形。软件解耦的最高境界与工程师静笃心法",
     description:
-      "五千言道尽天地化生之机。在纷扰的代码重构与技术迭代中，老子教我们如何以“无为”做架构、以“守柔”克刚强、以“虚静”保持心流与高阶专注。",
-    rating: 5.0,
-    totalWords: "约 5,000 字（全本精选）",
-    estimatedReadTime: "30 分钟精思",
-    isWeeklyPick: false,
+      "五千言道尽天地运化之机。在纷扰的代码重构与技术内卷中，老子教我们如何以“无为”做架构、以“守柔”化解系统刚性、以“虚静”保持心流与高阶专注。",
     curatorNote:
-      "【主理人导读】：软件架构设计的终极美感正是老子所说的‘上善若水’——不喧宾夺主，各模块自然流转解耦。读此书可抚平工程师心中的代码焦躁与内耗。",
+      "“上善若水，润物无声。最高级的软件系统正像流水一样，默默承载庞大的数据流，接口轻盈，对外界系统无侵入感。唯其不争，天下莫能与之争。”",
+    rating: 5.0,
+    totalWords: "精选 5,000 言",
+    estimatedReadTime: "约 30 分钟",
     chapters: [
       {
         id: "ch-1",
@@ -176,19 +199,20 @@ export const curatedBooks: Book[] = [
   },
   {
     id: "pragmatic-programmer",
-    title: "程序员修炼之道：从工匠到大师（核心心法）",
+    title: "程序员修炼之道：从代码工匠到系统大师",
     author: "大卫·托马斯 / 安德鲁·亨特",
-    coverGradient: "from-amber-600 via-orange-600 to-zinc-900",
-    category: "工程心法",
-    tagline: "拒绝平庸的代码堆砌，做掌控全生命周期的务实工匠",
+    year: "1999",
+    coverTone: "terracotta",
+    coverColor: "bg-[#F5ECE8] text-[#9A4B36] border-[#E6D4CE]",
+    category: "工匠技艺",
+    tagline: "拒绝平庸的机器指令堆砌，做掌控全生命周期的现代工匠",
     description:
-      "全球软件工程领域的传世圣经。没有过时的技术细节，只有关于责任、DRY原则、曳光弹开发法与软件熵增控制的永恒哲学。",
-    rating: 4.9,
-    totalWords: "约 2.8 万字",
-    estimatedReadTime: "40 分钟通读",
-    isWeeklyPick: false,
+      "全球软件工程领域的精神图腾。没有枯燥过时的 API 文档，只有关于责任担当、正交性解耦、曳光弹敏捷探索与破窗效应治理的永恒心法。",
     curatorNote:
-      "【主理人导读】：这本书彻底把我从一个‘写代码完成任务的打工人’重塑为一个‘对整个工程产出负责的独立工匠’。每一节都有如醍醐灌顶。",
+      "“不要留下一扇破损的窗户。发现坏代码时，花两分钟顺手修整它。保持代码库的尊严，就是在守护你自己作为一个手艺人的精神尊严。”",
+    rating: 4.9,
+    totalWords: "精读 2.8 万字",
+    estimatedReadTime: "约 40 分钟",
     chapters: [
       {
         id: "ch-1",
@@ -230,19 +254,20 @@ export const curatedBooks: Book[] = [
   },
   {
     id: "walden",
-    title: "瓦尔登湖：数字时代的极简与内省",
+    title: "瓦尔登湖：数字喧嚣中的极简与内省",
     author: "亨利·戴维·梭罗",
-    coverGradient: "from-sky-700 via-cyan-800 to-emerald-900",
-    category: "人文沉思",
-    tagline: "简朴，简朴，简朴！在喧嚣信息洪流中守住内在平静",
+    year: "1854",
+    coverTone: "slate",
+    coverColor: "bg-[#EEF1F5] text-[#4A5D75] border-[#D9DFE8]",
+    category: "精神林泉",
+    tagline: "简朴，简朴，简朴！在信息洪流中夺回对个人时间的绝对支配",
     description:
-      "梭罗在瓦尔登湖畔独居两年的灵魂记录。在这部超越时代的散文中，探讨了我们到底需要多少物质才能自由生活，如何在数字化焦虑中夺回心灵的自主权。",
-    rating: 4.8,
-    totalWords: "约 2.1 万字（精粹版）",
-    estimatedReadTime: "35 分钟沉浸",
-    isWeeklyPick: false,
+      "梭罗在瓦尔登湖畔独居两年的灵魂记录。在这部超越时代的经典散文中，他探讨了我们到底需要多少物质才能从容生活，以及如何在被 KPI 绑架的时代夺回心灵的主权。",
     curatorNote:
-      "【主理人导读】：现代人每天被微信通知、KPI 和算法推荐轰炸得疲惫不堪。在深夜打开这一章，看着湖畔晨雾与林中微风，你会重新明白什么是真正属于自己的时间。",
+      "“一件东西的真正代价，是为了换取它而需要立即或长期付出的那一整段生命。削减掉多余的社交虚荣，你所能拥有的专注与自由，将远超绝大多数人。”",
+    rating: 4.8,
+    totalWords: "精粹 2.1 万字",
+    estimatedReadTime: "约 35 分钟",
     chapters: [
       {
         id: "ch-1",

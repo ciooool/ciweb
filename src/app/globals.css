@@ -3,24 +3,59 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 暖白宣纸底色，温润雅致，彻底告别生硬死白 */
+  --background: #FAF8F5;
+  --foreground: #2C2A29;
+  --surface-card: #FFFFFF;
+  --surface-card-subtle: #F5F2EC;
+  --border-subtle: #E8E3DA;
+  --primary-accent: #C27D53; /* 温润琥珀陶土 */
+  --secondary-accent: #5F7A6A; /* 莫兰迪鼠尾草绿 */
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  /* 深邃暖砚墨色，非刺眼纯黑，具备东方墨意沉思感 */
+  --background: #181716;
+  --foreground: #EDE9E3;
+  --surface-card: #201F1D;
+  --surface-card-subtle: #272522;
+  --border-subtle: #33302B;
+  --primary-accent: #D89469;
+  --secondary-accent: #789984;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", STSong, Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 经典书籍排版专用优化 */
+.font-book-serif {
+  font-family: var(--font-serif);
+}
+
+/* 优雅平滑滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 130, 120, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 130, 120, 0.4);
 }

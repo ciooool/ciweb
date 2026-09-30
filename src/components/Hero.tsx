@@ -1,98 +1,99 @@
 import React from "react";
 import { siteConfig } from "@/data/siteConfig";
-import { ArrowRight, BookOpen, Sparkles, Layers, Cpu, Compass } from "lucide-react";
+import { ArrowRight, BookOpen, Sparkles, Compass, Feather, Cpu } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-24 border-b border-zinc-200/60 dark:border-zinc-800/60">
-      {/* Background ambient gradient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-blue-500/5 via-amber-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
+    <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28 border-b border-[#E8E3DA] dark:border-[#33302B] transition-colors">
+      {/* 极简暖色环境微晕 */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-80 bg-gradient-to-b from-[#C27D53]/5 via-[#5F7A6A]/5 to-transparent blur-3xl pointer-events-none -z-10" />
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start max-w-3xl">
-          {/* Availability Pill */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 mb-6 shadow-xs">
+          
+          {/* Status badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-serif bg-[#F5F2EC] text-[#6E6B65] dark:bg-[#201F1D] dark:text-[#A8A49C] border border-[#E8E3DA] dark:border-[#33302B] mb-8 shadow-2xs">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#5F7A6A] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#5F7A6A]"></span>
             </span>
             <span>{siteConfig.personal.availabilityStatus}</span>
           </div>
 
-          {/* Main Title */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-[1.18] mb-6">
-            代码构建系统，
+          {/* Main Title (杂志级雅致宋体) */}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-book-serif font-normal text-[#2C2A29] dark:text-[#EDE9E3] leading-[1.22] tracking-tight mb-6">
+            以代码构建产品，
             <br />
-            阅读重塑认知。
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-amber-600 bg-clip-text text-transparent">
-              {" "}做有灵魂的独立开发者{" "}
+            以阅读
+            <span className="text-[#C27D53] dark:text-[#D89469] font-serif italic">
+              {" "}重塑认知{" "}
             </span>
+            与心智。
           </h1>
 
           {/* Subtitle / Bio */}
-          <p className="text-lg sm:text-xl text-zinc-600 dark:text-zinc-300 leading-relaxed mb-8 max-w-2xl">
-            我是 <strong className="font-semibold text-zinc-900 dark:text-white">{siteConfig.personal.name}</strong>
-            ，一名热衷于产品交付的全栈工程师。
-            白天借助 AI 原生工作流与 Next.js / Go 打造极简、高可用的软件工具与 SaaS；
-            夜晚在纯净的数字书房中沉思经典。用工程硬实力与深度思考构建真正的长效数字资产。
+          <p className="text-base sm:text-lg text-[#59554E] dark:text-[#B8B4AB] font-serif leading-relaxed mb-10 max-w-2xl">
+            我是 <strong className="font-semibold text-[#2C2A29] dark:text-[#EDE9E3]">{siteConfig.personal.name}</strong>
+            。白天借由现代全栈工程（Next.js / TypeScript / Go）打磨解决真实痛点的小微产品与实用工具；
+            夜晚在纯净无广的数字书阁中沉思研读。追求技术之用，亦珍视精神之美。
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center gap-4 mb-12">
+          <div className="flex flex-wrap items-center gap-4 mb-14">
             <a
               href="#library"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 transition-all hover:scale-[1.02]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#2C2A29] px-6 py-3.5 text-xs font-serif font-semibold text-[#FAF8F5] shadow-xs hover:opacity-90 dark:bg-[#EDE9E3] dark:text-[#181716] transition-all hover:scale-[1.02]"
             >
-              <BookOpen className="h-4 w-4" />
-              <span>进入数字书房 (免费在读)</span>
+              <BookOpen className="h-4 w-4 text-[#C27D53]" />
+              <span>步入数字书房 (免费在读)</span>
             </a>
 
             <a
               href="#projects"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 transition-all"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D5CEBF] bg-white px-6 py-3.5 text-xs font-serif font-medium text-[#2C2A29] shadow-2xs hover:bg-stone-50 dark:border-[#33302B] dark:bg-[#201F1D] dark:text-[#EDE9E3] transition-all"
             >
-              <span>浏览作品工坊</span>
-              <ArrowRight className="h-4 w-4" />
+              <span>浏览独立产品</span>
+              <ArrowRight className="h-3.5 w-3.5 opacity-60" />
             </a>
 
             <a
               href="#interactive-tool"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 shadow-xs hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 transition-all"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 text-xs font-serif text-[#8C8881] hover:text-[#2C2A29] dark:hover:text-[#EDE9E3] transition-colors"
             >
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              <span>在线微工具箱</span>
+              <Sparkles className="h-3.5 w-3.5 text-[#C27D53]" />
+              <span>在线微工具</span>
             </a>
           </div>
 
-          {/* Key Advantages / Badges */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full pt-8 border-t border-zinc-200/70 dark:border-zinc-800/70">
+          {/* Key Pillars */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full pt-8 border-t border-[#E8E3DA] dark:border-[#33302B]">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 shrink-0">
-                <Layers className="h-4 w-4" />
+              <div className="p-2 rounded-xl bg-[#F0EBE1] text-[#8C5D39] dark:bg-[#2A2621] dark:text-[#D89469] shrink-0">
+                <Feather className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">全流程端到端交付</h4>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">从产品交互原型、全栈代码到全球秒级部署</p>
+                <h4 className="text-xs font-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3]">轻奢文艺 · 纯净无广</h4>
+                <p className="text-[11px] text-[#8C8881] mt-1 font-serif">如翻开纸质书般的沉浸呼吸感</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 shrink-0">
+              <div className="p-2 rounded-xl bg-[#EAF0EB] text-[#42614B] dark:bg-[#1E2820] dark:text-[#789984] shrink-0">
                 <Compass className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">人文深度与第一性原理</h4>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">从经典哲思中汲取系统架构与商业设计模型</p>
+                <h4 className="text-xs font-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3]">52周无感全自动荐书</h4>
+                <p className="text-[11px] text-[#8C8881] mt-1 font-serif">自然年历算法驱动，周周换新无需维护</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+              <div className="p-2 rounded-xl bg-[#EEF1F5] text-[#4A5D75] dark:bg-[#202730] dark:text-[#8CA4C2] shrink-0">
                 <Cpu className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">高可靠性能架构</h4>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Go 高并发核心与 Next.js 极致前端体验兼备</p>
+                <h4 className="text-xs font-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3]">云端读者证跨端漫游</h4>
+                <p className="text-[11px] text-[#8C8881] mt-1 font-serif">手机与电脑输入相同证号，进度实时对齐</p>
               </div>
             </div>
           </div>

@@ -1,56 +1,82 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Book, curatedBooks } from "@/data/libraryData";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Book,
+  curatedBooks,
+  getAutomatedWeeklyPick,
+  getCurrentWeekOfYear,
+} from "@/data/libraryData";
 import ZenReaderModal from "@/components/ZenReaderModal";
 import {
   BookOpen,
-  Sparkles,
   Bookmark,
   BookmarkCheck,
-  Clock,
   Star,
   Compass,
   UploadCloud,
-  ChevronRight,
   Library,
-  Flame,
-  CheckCircle2,
+  Sparkles,
+  RefreshCw,
+  Smartphone,
+  Laptop,
+  Check,
   Trash2,
+  Calendar,
+  KeyRound,
 } from "lucide-react";
 
 export default function ZenLibrary() {
   const [activeTab, setActiveTab] = useState<"curated" | "bookshelf" | "import">("curated");
   const [selectedCategory, setSelectedCategory] = useState<string>("全部");
+  
+  // 读者证号 (用于跨设备云同步)
+  const [readerId, setReaderId] = useState<string>("");
+  const [isEditingReaderId, setIsEditingReaderId] = useState<boolean>(false);
+  const [tempReaderIdInput, setTempReaderIdInput] = useState<string>("");
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  // 书房与阅读进度
   const [myBookshelfIds, setMyBookshelfIds] = useState<string[]>([]);
   const [readingProgressMap, setReadingProgressMap] = useState<
     Record<string, { chapterIndex: number; percentage: number; updatedAt: string }>
   >({});
   
-  // Custom uploaded books in localStorage
+  // 本地导入书籍
   const [customBooks, setCustomBooks] = useState<Book[]>([]);
 
-  // Active reading modal state
+  // 阅读器状态
   const [readingBook, setReadingBook] = useState<Book | null>(null);
   const [readingChapterIndex, setReadingChapterIndex] = useState<number>(0);
 
-  // Initialize from LocalStorage
+  // 1. 本地初始化加载
   useEffect(() => {
     try {
+      // 读者证号：如果本地没有，生成一个易记的 6 位数字码 (如 913849)
+      const storedReaderId = localStorage.getItem("zenlib_reader_id");
+      const initialId = storedReaderId || "913849";
+      setReaderId(initialId);
+      setTempReaderIdInput(initialId);
+      if (!storedReaderId) {
+        localStorage.setItem("zenlib_reader_id", initialId);
+      }
+
+      // 本地书房
       const savedShelf = localStorage.getItem("zenlib_my_bookshelf");
       if (savedShelf) {
         setMyBookshelfIds(JSON.parse(savedShelf));
       } else {
-        // Default seed: Naval's almanack & Dao De Jing
         setMyBookshelfIds(["navals-almanack", "dao-de-jing"]);
       }
 
+      // 本地自定义书籍
       const savedCustom = localStorage.getItem("zenlib_custom_books");
       if (savedCustom) {
         setCustomBooks(JSON.parse(savedCustom));
       }
 
-      // Load progress map
+      // 阅读进度
       const allBooks = [...curatedBooks, ...(savedCustom ? JSON.parse(savedCustom) : [])];
       const progMap: Record<string, { chapterIndex: number; percentage: number; updatedAt: string }> = {};
       allBooks.forEach((b) => {
@@ -65,9 +91,64 @@ export default function ZenLibrary() {
     }
   }, []);
 
+  // 2. 跨设备云端双向同步函数 (电脑端 <-> 手机端)
+  const syncWithCloud = useCallback(async (targetReaderId?: string) => {
+    const idToUse = (targetReaderId || readerId).trim();
+    if (!idToUse) return;
+
+    setIsSyncing(true);
+    setSyncNotice(null);
+
+    try {
+      const res = await fetch("/api/library/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          readerId: idToUse,
+          bookshelf: myBookshelfIds,
+          progress: readingProgressMap,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        const cloudShelf: string[] = json.data.bookshelf || [];
+        const cloudProgress = json.data.progress || {};
+
+        setMyBookshelfIds(cloudShelf);
+        setReadingProgressMap(cloudProgress);
+
+        localStorage.setItem("zenlib_my_bookshelf", JSON.stringify(cloudShelf));
+        localStorage.setItem("zenlib_reader_id", idToUse);
+        Object.entries(cloudProgress).forEach(([bId, pVal]) => {
+          localStorage.setItem(`zenlib_progress_${bId}`, JSON.stringify(pVal));
+        });
+
+        setSyncNotice(`已成功与云端对齐 (证号: ${idToUse})`);
+        setTimeout(() => setSyncNotice(null), 3000);
+      }
+    } catch {
+      setSyncNotice("网络连通异常，使用本地离线副本");
+      setTimeout(() => setSyncNotice(null), 3000);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [readerId, myBookshelfIds, readingProgressMap]);
+
+  // 保存新读者证号并同步
+  const handleSaveReaderId = () => {
+    const clean = tempReaderIdInput.trim();
+    if (clean) {
+      setReaderId(clean);
+      setIsEditingReaderId(false);
+      localStorage.setItem("zenlib_reader_id", clean);
+      syncWithCloud(clean);
+    }
+  };
+
   const allAvailableBooks = [...curatedBooks, ...customBooks];
 
-  // Toggle bookshelf membership
+  // 书房收藏切换
   const toggleBookshelf = (bookId: string) => {
     let updated: string[];
     if (myBookshelfIds.includes(bookId)) {
@@ -81,15 +162,27 @@ export default function ZenLibrary() {
     } catch {
       // ignore
     }
+    // 异步同步到云端
+    setTimeout(() => {
+      fetch("/api/library/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          readerId,
+          bookshelf: updated,
+          progress: readingProgressMap,
+        }),
+      }).catch(() => {});
+    }, 500);
   };
 
-  // Open book in Zen Reader
+  // 打开沉浸阅读器
   const handleOpenReader = (book: Book, chapterIdx = 0) => {
     setReadingBook(book);
     setReadingChapterIndex(chapterIdx);
   };
 
-  // Handle local file drop (.txt or .md)
+  // 拖拽本地文件解析
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -99,30 +192,32 @@ export default function ZenLibrary() {
       const text = event.target?.result as string;
       if (!text) return;
 
-      // Simple auto-splitting into chapters
       const rawChapters = text.split(/(?=第[0-9一二三四五六七八九十百]+[章节回卷])/g);
-      const chapters = rawChapters.length > 1
-        ? rawChapters.map((content, idx) => ({
-            id: `local-ch-${idx + 1}`,
-            title: content.slice(0, 30).split("\n")[0].trim() || `第 ${idx + 1} 节`,
-            content: content.trim(),
-          }))
-        : [
-            {
-              id: "local-ch-1",
-              title: "全文阅读",
-              content: text.trim(),
-            },
-          ];
+      const chapters =
+        rawChapters.length > 1
+          ? rawChapters.map((content, idx) => ({
+              id: `local-ch-${idx + 1}`,
+              title: content.slice(0, 30).split("\n")[0].trim() || `第 ${idx + 1} 节`,
+              content: content.trim(),
+            }))
+          : [
+              {
+                id: "local-ch-1",
+                title: "正文阅读",
+                content: text.trim(),
+              },
+            ];
 
       const newCustomBook: Book = {
         id: `custom-${Date.now()}`,
         title: file.name.replace(/\.[^/.]+$/, ""),
-        author: "本地导入书籍",
-        coverGradient: "from-zinc-700 via-zinc-800 to-zinc-950",
-        category: "人文沉思",
-        tagline: "本地拖拽导入的专属私有书籍",
-        description: `于本地导入，共包含 ${chapters.length} 个章节，纯客户端解析保存。`,
+        author: "私人本地书卷",
+        coverTone: "slate",
+        coverColor: "bg-[#EFECE6] text-[#4A4843] border-[#DDD8CE]",
+        category: "精神林泉",
+        tagline: "本地拖拽导入的专属私密书籍",
+        description: `由本地导入，共包含 ${chapters.length} 个章节，纯客户端解析保存，永不上传服务器。`,
+        curatorNote: "【私人藏书】在本地设备私密阅读，阅读进度将自动保存至当前书房。",
         rating: 5.0,
         totalWords: `约 ${Math.round(text.length / 1000)}k 字`,
         estimatedReadTime: `${Math.max(1, Math.round(text.length / 500))} 分钟`,
@@ -141,17 +236,16 @@ export default function ZenLibrary() {
         // ignore
       }
 
-      // Auto start reading!
       handleOpenReader(newCustomBook, 0);
     };
     reader.readAsText(file);
   };
 
-  // Weekly featured book
-  const weeklyBook = curatedBooks.find((b) => b.isWeeklyPick) || curatedBooks[0];
+  // 全自动 52 周轮转推荐
+  const { book: weeklyPickBook, weekNumber } = getAutomatedWeeklyPick(curatedBooks);
 
-  // Category filter
-  const categories = ["全部", "哲学与智慧", "独立开发与商业", "工程心法", "人文沉思"];
+  // 分类筛选
+  const categories = ["全部", "商业与杠杆", "东方至道", "工匠技艺", "精神林泉"];
   const filteredBooks =
     selectedCategory === "全部"
       ? curatedBooks
@@ -160,170 +254,236 @@ export default function ZenLibrary() {
   const bookshelfBooks = allAvailableBooks.filter((b) => myBookshelfIds.includes(b.id));
 
   return (
-    <section id="library" className="py-16 md:py-24 border-b border-zinc-200/60 dark:border-zinc-800/60 bg-gradient-to-b from-transparent via-zinc-50/50 to-transparent dark:via-zinc-900/20">
+    <section id="library" className="py-20 md:py-28 border-b border-[#E8E3DA] dark:border-[#33302B] transition-colors">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        
+        {/* --- Header Section (清新书卷气排版) --- */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">
+            <div className="inline-flex items-center gap-2 text-xs font-serif tracking-widest text-[#C27D53] dark:text-[#D89469] uppercase mb-3">
               <Library className="h-3.5 w-3.5" />
-              <span>ZenLib · 沉浸式数字禅房</span>
+              <span>ZenLib · 掌上云端书房</span>
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-              灵感书房与免费阅读阁
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-book-serif font-normal text-[#2C2A29] dark:text-[#EDE9E3] tracking-tight">
+              灵感书阁与沉浸阅读室
             </h2>
-            <p className="mt-2 text-base text-zinc-600 dark:text-zinc-400 max-w-2xl">
-              受公共图书馆纯粹阅读体验启发：<strong>纯净零广告</strong>。沉淀精选传世经典与极客心法，支持个人书房断点续读与本地书籍拖拽即读。
+            <p className="mt-3 text-sm sm:text-base text-[#6E6B65] dark:text-[#A8A49C] max-w-2xl leading-relaxed">
+              受公共图书馆纯粹阅读体验启发：<strong>纯净零广告，全天候静心研读</strong>。
+              涵盖东方心法与独立商业哲学，支持跨终端设备进度无感漫游。
             </p>
           </div>
 
-          <div className="mt-4 md:mt-0 flex items-center gap-2 text-xs font-mono text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-800/80 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-xs">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>本地在读书房已就绪</span>
+          {/* 跨终端借阅证同步卡片 */}
+          <div className="flex flex-col items-start sm:items-end gap-2 bg-[#F5F2EC] dark:bg-[#201F1D] p-3.5 rounded-2xl border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs">
+            <div className="flex items-center gap-2 text-xs text-[#6E6B65] dark:text-[#A8A49C]">
+              <span className="h-2 w-2 rounded-full bg-[#5F7A6A] animate-pulse"></span>
+              <span className="font-serif">云端读者借阅证：</span>
+              
+              {isEditingReaderId ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={tempReaderIdInput}
+                    onChange={(e) => setTempReaderIdInput(e.target.value)}
+                    placeholder="如: 888888"
+                    className="w-24 px-2 py-0.5 text-xs font-mono rounded border border-[#C27D53] bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                  />
+                  <button
+                    onClick={handleSaveReaderId}
+                    className="px-2 py-0.5 bg-[#C27D53] text-white rounded text-[11px]"
+                  >
+                    绑定
+                  </button>
+                </div>
+              ) : (
+                <span
+                  onClick={() => setIsEditingReaderId(true)}
+                  className="font-mono font-bold text-[#2C2A29] dark:text-[#EDE9E3] bg-white dark:bg-zinc-800 px-2 py-0.5 rounded cursor-pointer border border-[#E8E3DA] dark:border-[#33302B] hover:border-[#C27D53]"
+                  title="点击可修改为你的专属卡号"
+                >
+                  {readerId || "未绑定"} ✏️
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 text-[11px] text-[#8C8881]">
+              <span className="flex items-center gap-1">
+                <Laptop className="h-3 w-3" />
+                <span>电脑</span>
+                <span>⇄</span>
+                <Smartphone className="h-3 w-3" />
+                <span>手机免密对齐</span>
+              </span>
+              <button
+                onClick={() => syncWithCloud()}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1 font-serif text-[#C27D53] hover:underline"
+              >
+                <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
+                <span>{isSyncing ? "同步中..." : "即刻同步"}</span>
+              </button>
+            </div>
+
+            {syncNotice && (
+              <span className="text-[10px] text-[#5F7A6A] font-serif">{syncNotice}</span>
+            )}
           </div>
         </div>
 
-        {/* --- 1. Weekly Pick Hero Banner --- */}
-        {weeklyBook && (
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-indigo-950 to-zinc-950 text-white p-6 sm:p-8 md:p-10 mb-12 shadow-xl border border-zinc-800">
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 relative z-10">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-4">
-                  <Flame className="h-3.5 w-3.5" />
-                  <span>本周主理人精选好书</span>
-                </div>
-
-                <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">
-                  {weeklyBook.title}
-                </h3>
-                <p className="text-xs font-mono text-blue-300 mb-4">
-                  著：{weeklyBook.author} · {weeklyBook.totalWords} · {weeklyBook.estimatedReadTime}
-                </p>
-
-                <p className="text-sm text-zinc-300 leading-relaxed mb-4">
-                  {weeklyBook.description}
-                </p>
-
-                {weeklyBook.curatorNote && (
-                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs text-zinc-300 italic mb-6">
-                    {weeklyBook.curatorNote}
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => handleOpenReader(weeklyBook, 0)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-100 transition-all hover:scale-[1.02] shadow-sm"
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    <span>即刻沉浸阅读</span>
-                  </button>
-
-                  <button
-                    onClick={() => toggleBookshelf(weeklyBook.id)}
-                    className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
-                      myBookshelfIds.includes(weeklyBook.id)
-                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                        : "bg-white/10 text-white border-white/20 hover:bg-white/20"
-                    }`}
-                  >
-                    {myBookshelfIds.includes(weeklyBook.id) ? (
-                      <>
-                        <BookmarkCheck className="h-4 w-4 text-emerald-400" />
-                        <span>已在我的书房</span>
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark className="h-4 w-4" />
-                        <span>加入我的书房</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+        {/* --- 1. Automated Weekly Pick Hero (轻奢杂志级排版) --- */}
+        <div className="relative overflow-hidden rounded-3xl bg-[#FAF6F0] dark:bg-[#201F1D] border border-[#E5DAC8] dark:border-[#38342E] p-6 sm:p-10 md:p-12 mb-16 shadow-xs">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            {/* Left Column: Book Details */}
+            <div className="lg:col-span-8 flex flex-col items-start">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-serif text-[#C27D53] bg-[#F0E6D8] dark:bg-[#332A22] border border-[#E5DAC8] dark:border-[#473B2F] mb-4">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>第 {weekNumber} 周 · 全自动主理人轮转精选</span>
               </div>
 
-              {/* Aesthetic Book spine/card representation */}
-              <div className="shrink-0 w-full sm:w-64 h-48 sm:h-64 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-700 to-purple-900 p-6 flex flex-col justify-between shadow-2xl border border-white/20 transform sm:rotate-2 hover:rotate-0 transition-transform">
-                <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-mono tracking-widest uppercase opacity-80">
-                    {weeklyBook.category}
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-book-serif font-normal text-[#2C2A29] dark:text-[#EDE9E3] leading-snug mb-3">
+                {weeklyPickBook.title}
+              </h3>
+              
+              <div className="flex flex-wrap items-center gap-3 text-xs text-[#8C8881] font-serif mb-5">
+                <span>著：{weeklyPickBook.author}</span>
+                <span>·</span>
+                <span>{weeklyPickBook.category}</span>
+                <span>·</span>
+                <span>{weeklyPickPickMeta(weeklyPickBook)}</span>
+              </div>
+
+              <p className="text-sm sm:text-base text-[#59554E] dark:text-[#B8B4AB] leading-relaxed mb-6 font-serif">
+                {weeklyPickBook.description}
+              </p>
+
+              {/* Curator Note Box */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white/70 dark:bg-zinc-900/60 border border-[#E8E3DA] dark:border-[#33302B] text-xs sm:text-sm text-[#4A4742] dark:text-[#CCC7BE] font-serif leading-relaxed mb-8 relative">
+                <span className="text-2xl text-[#C27D53] absolute -top-2 left-3 font-serif">“</span>
+                <p className="pl-4 italic">{weeklyPickBook.curatorNote}</p>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap items-center gap-4">
+                <button
+                  onClick={() => handleOpenReader(weeklyPickBook, 0)}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-all hover:scale-[1.02] shadow-xs"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  <span>即刻沉浸阅读</span>
+                </button>
+
+                <button
+                  onClick={() => toggleBookshelf(weeklyPickBook.id)}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-serif font-medium border transition-colors ${
+                    myBookshelfIds.includes(weeklyPickBook.id)
+                      ? "bg-[#5F7A6A]/10 text-[#5F7A6A] border-[#5F7A6A]/30 dark:bg-[#789984]/20 dark:text-[#789984]"
+                      : "bg-white dark:bg-zinc-800 text-[#2C2A29] dark:text-[#EDE9E3] border-[#E8E3DA] dark:border-[#33302B] hover:bg-stone-50"
+                  }`}
+                >
+                  {myBookshelfIds.includes(weeklyPickBook.id) ? (
+                    <>
+                      <BookmarkCheck className="h-4 w-4" />
+                      <span>已在在读书房</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="h-4 w-4" />
+                      <span>放入我的书房</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column: 3:4 Realistic Hardcover Book Spine */}
+            <div className="lg:col-span-4 flex justify-center">
+              <div
+                onClick={() => handleOpenReader(weeklyPickBook, 0)}
+                className={`group cursor-pointer relative w-52 sm:w-60 h-72 sm:h-80 rounded-2xl p-6 flex flex-col justify-between border shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1.5 ${weeklyPickBook.coverColor}`}
+              >
+                {/* Book spine ribbon detail */}
+                <div className="absolute left-3 top-0 bottom-0 w-2.5 bg-black/5 dark:bg-white/5 border-r border-black/10 dark:border-white/10" />
+
+                <div className="pl-4 flex justify-between items-start">
+                  <span className="text-[10px] font-mono tracking-widest uppercase opacity-70">
+                    {weeklyPickBook.category}
                   </span>
-                  <div className="flex items-center gap-1 text-amber-300 text-xs font-bold">
+                  <div className="flex items-center gap-1 text-xs font-bold">
                     <Star className="h-3.5 w-3.5 fill-current" />
-                    <span>{weeklyBook.rating}</span>
+                    <span>{weeklyPickBook.rating}</span>
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-extrabold text-lg text-white leading-tight mb-1">
-                    {weeklyBook.title}
+                <div className="pl-4 my-auto">
+                  <h4 className="font-book-serif text-xl sm:text-2xl font-bold leading-tight mb-2">
+                    {weeklyPickBook.title}
                   </h4>
-                  <p className="text-xs opacity-80 text-zinc-200">{weeklyBook.tagline}</p>
+                  <p className="text-xs opacity-75 line-clamp-2">{weeklyPickBook.tagline}</p>
                 </div>
 
-                <div className="text-[11px] font-mono opacity-60 border-t border-white/20 pt-2">
-                  ZenLib Reader Edition
+                <div className="pl-4 pt-3 border-t border-current/15 flex justify-between items-center text-[10px] font-mono opacity-60">
+                  <span>ZENLIB READER</span>
+                  <span>OPEN &rarr;</span>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* --- 2. Tab Navigation & Controls --- */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4 mb-8">
+        {/* --- 2. Tab Navigation --- */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E8E3DA] dark:border-[#33302B] pb-4 mb-10">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab("curated")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-serif transition-all ${
                 activeTab === "curated"
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs"
-                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                  ? "bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] shadow-xs"
+                  : "text-[#6E6B65] hover:text-[#2C2A29] dark:text-[#A8A49C] dark:hover:text-[#EDE9E3]"
               }`}
             >
               <Compass className="h-3.5 w-3.5" />
-              <span>发现精选藏书</span>
+              <span>发现藏书阁</span>
             </button>
 
             <button
               onClick={() => setActiveTab("bookshelf")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-serif transition-all ${
                 activeTab === "bookshelf"
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs"
-                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                  ? "bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] shadow-xs"
+                  : "text-[#6E6B65] hover:text-[#2C2A29] dark:text-[#A8A49C] dark:hover:text-[#EDE9E3]"
               }`}
             >
               <Bookmark className="h-3.5 w-3.5" />
               <span>我的在读书房</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-400">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#C27D53]/20 text-[#C27D53] font-mono">
                 {myBookshelfIds.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab("import")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-serif transition-all ${
                 activeTab === "import"
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs"
-                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                  ? "bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] shadow-xs"
+                  : "text-[#6E6B65] hover:text-[#2C2A29] dark:text-[#A8A49C] dark:hover:text-[#EDE9E3]"
               }`}
             >
               <UploadCloud className="h-3.5 w-3.5" />
-              <span>导入本地自选书</span>
+              <span>本地自选书拖入</span>
             </button>
           </div>
 
           {activeTab === "curated" && (
-            <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-serif">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1 rounded-lg transition-colors ${
                     selectedCategory === cat
-                      ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white font-medium"
-                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                      ? "bg-[#E8E3DA] dark:bg-[#33302B] text-[#2C2A29] dark:text-[#EDE9E3] font-bold"
+                      : "text-[#8C8881] hover:text-[#2C2A29] dark:hover:text-white"
                   }`}
                 >
                   {cat}
@@ -333,9 +493,9 @@ export default function ZenLibrary() {
           )}
         </div>
 
-        {/* --- View 1: Curated Library Grid --- */}
+        {/* --- View 1: Curated Library Grid (轻奢卡片) --- */}
         {activeTab === "curated" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredBooks.map((book) => {
               const inShelf = myBookshelfIds.includes(book.id);
               const progress = readingProgressMap[book.id];
@@ -343,48 +503,43 @@ export default function ZenLibrary() {
               return (
                 <div
                   key={book.id}
-                  className="flex flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/60 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-all hover:shadow-md"
+                  className="flex flex-col justify-between rounded-3xl bg-white dark:bg-[#201F1D] p-7 border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs hover:shadow-md transition-all hover:border-[#D5CEBF]"
                 >
                   <div>
-                    {/* Category & Rating */}
+                    {/* Top Spine Header */}
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                      <span className="text-[11px] font-serif px-2.5 py-0.5 rounded-full bg-[#F5F2EC] dark:bg-[#272522] text-[#6E6B65] dark:text-[#A8A49C]">
                         {book.category}
                       </span>
-                      <div className="flex items-center gap-1 text-xs font-semibold text-amber-500">
+                      <div className="flex items-center gap-1 text-xs font-bold text-[#C27D53]">
                         <Star className="h-3.5 w-3.5 fill-current" />
                         <span>{book.rating}</span>
                       </div>
                     </div>
 
-                    {/* Book spine aesthetic bar */}
-                    <div
-                      className={`h-2.5 w-16 rounded-full bg-gradient-to-r ${book.coverGradient} mb-4`}
-                    />
-
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+                    <h3 className="text-xl font-book-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-1.5 leading-snug">
                       {book.title}
                     </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                    <p className="text-xs text-[#8C8881] font-serif mb-4">
                       著：{book.author} · {book.totalWords}
                     </p>
 
-                    <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed mb-6">
+                    <p className="text-xs sm:text-sm text-[#59554E] dark:text-[#A8A49C] leading-relaxed mb-6 font-serif line-clamp-3">
                       {book.description}
                     </p>
                   </div>
 
                   <div>
-                    {/* Reading progress if any */}
+                    {/* Reading Progress Line if any */}
                     {progress && (
-                      <div className="mb-4">
-                        <div className="flex justify-between text-[11px] text-zinc-400 mb-1">
+                      <div className="mb-4 p-2.5 rounded-xl bg-[#FAF8F5] dark:bg-[#181716] border border-[#E8E3DA] dark:border-[#33302B]">
+                        <div className="flex justify-between text-[11px] text-[#8C8881] font-serif mb-1">
                           <span>已读到第 {progress.chapterIndex + 1} 章</span>
-                          <span>{progress.percentage}%</span>
+                          <span className="font-mono">{progress.percentage}%</span>
                         </div>
-                        <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1">
+                        <div className="w-full bg-[#E8E3DA] dark:bg-[#33302B] rounded-full h-1">
                           <div
-                            className="bg-blue-600 h-1 rounded-full"
+                            className="bg-[#C27D53] h-1 rounded-full transition-all"
                             style={{ width: `${progress.percentage}%` }}
                           />
                         </div>
@@ -392,12 +547,12 @@ export default function ZenLibrary() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="flex items-center gap-2 pt-4 border-t border-[#F0EBE1] dark:border-[#272522]">
                       <button
                         onClick={() =>
                           handleOpenReader(book, progress ? progress.chapterIndex : 0)
                         }
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-colors"
                       >
                         <BookOpen className="h-3.5 w-3.5" />
                         <span>{progress ? "继续阅读" : "沉浸阅读"}</span>
@@ -405,10 +560,10 @@ export default function ZenLibrary() {
 
                       <button
                         onClick={() => toggleBookshelf(book.id)}
-                        className={`p-2 rounded-xl border text-xs transition-colors ${
+                        className={`p-2.5 rounded-xl border text-xs transition-colors ${
                           inShelf
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
-                            : "border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 text-zinc-500"
+                            ? "bg-[#5F7A6A]/10 text-[#5F7A6A] border-[#5F7A6A]/30"
+                            : "border-[#E8E3DA] hover:bg-stone-50 dark:border-[#33302B] text-[#8C8881]"
                         }`}
                         title={inShelf ? "移出书房" : "加入书房"}
                       >
@@ -430,69 +585,70 @@ export default function ZenLibrary() {
         {activeTab === "bookshelf" && (
           <div>
             {bookshelfBooks.length === 0 ? (
-              <div className="text-center py-16 border border-dashed border-zinc-300 dark:border-zinc-800 rounded-3xl">
-                <BookOpen className="h-10 w-10 text-zinc-400 mx-auto mb-3" />
-                <h3 className="text-base font-semibold text-zinc-900 dark:text-white mb-1">
-                  书房空空如也
+              <div className="text-center py-20 border border-dashed border-[#E8E3DA] dark:border-[#33302B] rounded-3xl bg-[#FAF8F5] dark:bg-[#201F1D]">
+                <BookOpen className="h-10 w-10 text-[#8C8881] mx-auto mb-3 opacity-60" />
+                <h3 className="text-base font-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-1">
+                  书房静候书卷
                 </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
-                  在“发现精选藏书”中点击“加入我的书房”，或者导入本地 TXT/MD 书籍。
+                <p className="text-xs text-[#8C8881] font-serif mb-6">
+                  在“发现藏书阁”中点击“放入书房”，或在不同设备输入相同借阅证号同步。
                 </p>
                 <button
                   onClick={() => setActiveTab("curated")}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-semibold"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif"
                 >
                   去发现好书
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {bookshelfBooks.map((book) => {
                   const progress = readingProgressMap[book.id];
 
                   return (
                     <div
                       key={book.id}
-                      className="flex flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/60 shadow-xs"
+                      className="flex flex-col justify-between rounded-3xl bg-white dark:bg-[#201F1D] p-7 border border-[#E8E3DA] dark:border-[#33302B] shadow-2xs"
                     >
                       <div>
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>在读藏书</span>
+                          <span className="text-xs font-serif text-[#5F7A6A] flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-[#5F7A6A]" />
+                            <span>在读研习</span>
                           </span>
                           <button
                             onClick={() => toggleBookshelf(book.id)}
-                            className="text-zinc-400 hover:text-red-500 p-1"
-                            title="从书房移出"
+                            className="text-[#8C8881] hover:text-red-500 p-1"
+                            title="移出书房"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
 
-                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+                        <h3 className="text-xl font-book-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-1">
                           {book.title}
                         </h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
+                        <p className="text-xs text-[#8C8881] font-serif mb-4">
                           著：{book.author} · 共 {book.chapters.length} 章节
                         </p>
                       </div>
 
                       <div>
-                        {/* Progress */}
-                        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 mb-4">
-                          <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-300 font-medium mb-1.5">
+                        <div className="p-3.5 rounded-2xl bg-[#FAF8F5] dark:bg-[#181716] border border-[#E8E3DA] dark:border-[#33302B] mb-4">
+                          <div className="flex justify-between text-xs text-[#59554E] dark:text-[#A8A49C] font-serif mb-1.5">
                             <span>
                               {progress
                                 ? `读至第 ${progress.chapterIndex + 1} 章`
-                                : "尚未开始阅读"}
+                                : "尚未启卷"}
                             </span>
-                            <span className="font-mono">{progress ? `${progress.percentage}%` : "0%"}</span>
+                            <span className="font-mono text-[#C27D53] font-bold">
+                              {progress ? `${progress.percentage}%` : "0%"}
+                            </span>
                           </div>
-                          <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                          <div className="w-full bg-[#E8E3DA] dark:bg-[#33302B] rounded-full h-1.5">
                             <div
-                              className="bg-emerald-500 h-1.5 rounded-full transition-all"
-                              style={{ width: `${progress ? progress.percentage : 5}%` }}
+                              className="bg-[#C27D53] h-1.5 rounded-full transition-all"
+                              style={{ width: `${progress ? progress.percentage : 4}%` }}
                             />
                           </div>
                         </div>
@@ -501,9 +657,9 @@ export default function ZenLibrary() {
                           onClick={() =>
                             handleOpenReader(book, progress ? progress.chapterIndex : 0)
                           }
-                          className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors shadow-xs"
+                          className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-colors shadow-2xs"
                         >
-                          <BookOpen className="h-3.5 w-3.5" />
+                          <BookOpen className="h-4 w-4" />
                           <span>{progress ? "断点续读" : "开始阅读"}</span>
                         </button>
                       </div>
@@ -517,22 +673,22 @@ export default function ZenLibrary() {
 
         {/* --- View 3: Local File Import --- */}
         {activeTab === "import" && (
-          <div className="max-w-2xl mx-auto p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 shadow-xs text-center">
-            <div className="h-16 w-16 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4">
+          <div className="max-w-xl mx-auto p-10 rounded-3xl border border-[#E8E3DA] dark:border-[#33302B] bg-white dark:bg-[#201F1D] text-center shadow-xs">
+            <div className="h-16 w-16 rounded-2xl bg-[#FAF6F0] dark:bg-[#272522] text-[#C27D53] flex items-center justify-center mx-auto mb-5 border border-[#E5DAC8] dark:border-[#38342E]">
               <UploadCloud className="h-8 w-8" />
             </div>
 
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
-              拖拽导入你的本地电子书 / 文本
+            <h3 className="text-2xl font-book-serif font-bold text-[#2C2A29] dark:text-[#EDE9E3] mb-2">
+              拖入电脑自选手稿与电子书
             </h3>
-            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-md mx-auto mb-6 leading-relaxed">
-              支持直接选择或拖入电脑中的 <strong>.txt</strong> 或 <strong>.md</strong> 格式文件。
-              纯浏览器本地解析与存储，<strong>绝不上传任何服务器</strong>，安全保护你的私密阅读体验。
+            <p className="text-xs sm:text-sm text-[#6E6B65] dark:text-[#A8A49C] max-w-md mx-auto mb-8 font-serif leading-relaxed">
+              支持直接拖入 <strong>.txt</strong> 或 <strong>.md</strong> 纯文本文件。
+              纯浏览器本地解析切分章节，<strong>永不上传任何服务器</strong>，保护你的私密书卷天地。
             </p>
 
-            <label className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold text-xs hover:bg-blue-700 transition-colors cursor-pointer shadow-sm">
+            <label className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#C27D53] text-white font-serif font-semibold text-xs hover:opacity-90 transition-opacity cursor-pointer shadow-xs">
               <UploadCloud className="h-4 w-4" />
-              <span>选择本地文件即刻开启阅读</span>
+              <span>选取文件立即开启阅读</span>
               <input
                 type="file"
                 accept=".txt,.md"
@@ -540,21 +696,6 @@ export default function ZenLibrary() {
                 className="hidden"
               />
             </label>
-
-            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-center gap-6 text-[11px] text-zinc-400">
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                <span>自动拆分章节</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                <span>纯本地隐私存储</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                <span>永久无广告沉浸</span>
-              </span>
-            </div>
           </div>
         )}
       </div>
@@ -566,19 +707,36 @@ export default function ZenLibrary() {
           initialChapterIndex={readingChapterIndex}
           onClose={() => setReadingBook(null)}
           onProgressUpdate={(bookId, chapterIndex) => {
-            setReadingProgressMap((prev) => ({
-              ...prev,
+            const newPercentage = Math.round(
+              ((chapterIndex + 1) / (readingBook?.chapters.length || 1)) * 100
+            );
+            const newProgressMap = {
+              ...readingProgressMap,
               [bookId]: {
                 chapterIndex,
-                percentage: Math.round(
-                  ((chapterIndex + 1) / (readingBook?.chapters.length || 1)) * 100
-                ),
+                percentage: newPercentage,
                 updatedAt: new Date().toISOString(),
               },
-            }));
+            };
+            setReadingProgressMap(newProgressMap);
+
+            // 自动静默同步云端
+            fetch("/api/library/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                readerId,
+                bookshelf: myBookshelfIds,
+                progress: newProgressMap,
+              }),
+            }).catch(() => {});
           }}
         />
       )}
     </section>
   );
+}
+
+function weeklyPickPickMeta(book: Book) {
+  return `${book.totalWords} · ${book.estimatedReadTime}`;
 }
