@@ -98,9 +98,9 @@ export default function Hero() {
 
           <div className="p-3 border-r border-[#1F2A4D]/50 last:border-r-0">
             <h3 className="text-2xl sm:text-3xl font-mono font-bold text-[#8B7BFF] drop-shadow-[0_0_12px_rgba(139,123,255,0.5)] mb-1">
-              25+ 部
+              8 部
             </h3>
-            <p className="text-xs font-sans text-[#7D88AA]">精选殿堂级心智模型神作</p>
+            <p className="text-xs font-sans text-[#7D88AA]">精选殿堂级核心认知神作</p>
           </div>
 
           <div className="p-3 border-r border-[#1F2A4D]/50 last:border-r-0">

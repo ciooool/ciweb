@@ -185,44 +185,56 @@ export default function ZenLibrary() {
   // 今日荐读轮播列表
   const todayList = [
     {
-      date: "09/27",
+      date: "10/04",
       day: "周五",
-      book: CURATOR_BOOKS.find((b) => b.id === "antifragile") || CURATOR_BOOKS[0],
+      book: CURATOR_BOOKS.find((b) => b.id === "old-man-and-the-sea") || CURATOR_BOOKS[0],
       active: false,
     },
     {
-      date: "09/28",
+      date: "10/05",
       day: "周六",
-      book: CURATOR_BOOKS.find((b) => b.id === "ddia") || CURATOR_BOOKS[1],
+      book: CURATOR_BOOKS.find((b) => b.id === "ming-dynasty") || CURATOR_BOOKS[1],
       active: false,
     },
     {
-      date: "09/29",
+      date: "10/06",
       day: "周日",
-      book: CURATOR_BOOKS.find((b) => b.id === "poor-charlies-almanack") || CURATOR_BOOKS[2],
+      book: CURATOR_BOOKS.find((b) => b.id === "rich-dad-poor-dad") || CURATOR_BOOKS[2],
       active: false,
     },
     {
-      date: "09/30",
-      day: "今天",
+      date: "10/07",
+      day: "昨天",
       book: CURATOR_BOOKS.find((b) => b.id === "navals-almanack") || CURATOR_BOOKS[3],
+      active: false,
+    },
+    {
+      date: "10/08",
+      day: "今天",
+      book: CURATOR_BOOKS.find((b) => b.id === "poor-charlies-almanack") || CURATOR_BOOKS[4],
       active: true, // 主推位
     },
     {
-      date: "10/01",
-      day: "周二",
-      book: CURATOR_BOOKS.find((b) => b.id === "rich-dad-poor-dad") || CURATOR_BOOKS[4],
+      date: "10/09",
+      day: "明天",
+      book: CURATOR_BOOKS.find((b) => b.id === "antifragile") || CURATOR_BOOKS[5],
       active: false,
     },
     {
-      date: "10/02",
-      day: "周三",
-      book: CURATOR_BOOKS.find((b) => b.id === "pragmatic-programmer") || CURATOR_BOOKS[5],
+      date: "10/10",
+      day: "周五",
+      book: CURATOR_BOOKS.find((b) => b.id === "inside-china-system") || CURATOR_BOOKS[6],
+      active: false,
+    },
+    {
+      date: "10/11",
+      day: "周六",
+      book: CURATOR_BOOKS.find((b) => b.id === "courage-to-be-disliked") || CURATOR_BOOKS[7],
       active: false,
     },
   ];
 
-  const activeTodayItem = todayList[todayIndex] || todayList[3];
+  const activeTodayItem = todayList[todayIndex] || todayList[4];
 
   return (
     <section id="library" className="py-20 md:py-28 border-b border-[#EAE6DF] dark:border-[#2C2A28] transition-colors">
@@ -238,9 +250,9 @@ export default function ZenLibrary() {
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-normal text-[#1F1E1D] dark:text-[#EDE9E3] tracking-tight">
               私享书架与认知模型
             </h2>
-            <p className="mt-2 text-sm sm:text-base text-[#6B6760] dark:text-[#A8A49C] max-w-2xl font-serif leading-relaxed">
-              <strong>拒绝残缺抓取与碎片阅读</strong>：精选 25+ 部殿堂级著作，深度拆解核心心智模型与精粹金句。
-              全本正版直通<strong>微信读书官方</strong>，书架支持多端云端漫游。
+            <p className="mt-2 text-sm sm:text-base text-[#9FB0D0] max-w-2xl font-mono leading-relaxed">
+              <strong>拒绝残缺抓取与碎片阅读</strong>：精选 8 部殿堂级核心著作，深度拆解心智模型与精粹金句。
+              全本正版直通<strong>微信读书官方</strong>，私享书架支持多端云端漫游。
             </p>
           </div>
 
