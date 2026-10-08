@@ -51,6 +51,8 @@ export interface PortfolioData {
     wechat: string;
     github: string;
     twitter: string;
+    avatar: string;
+    avatarAlt: string;
   };
   ledgerStats: Array<{ number: string; label: string }>;
   principles: Array<{ num: string; title: string; desc: string }>;
@@ -67,10 +69,12 @@ export const portfolioData: PortfolioData = {
     bio: "深耕现代全栈系统工程（Next.js / TypeScript / Go），同时搭建这座数字认知书房与独立造物工坊。崇尚极简克制的高效工程，追求无需他人许可的长效数字复利。",
     location: "China · Remote Available",
     availability: "开放高质量微产品造物 · 承接高并发架构咨询与 MVP 研发",
-    email: "ciooool.dev@example.com",
-    wechat: "ciooool_dev",
+    email: "913849845@qq.com",
+    wechat: "WYZ929357",
     github: "https://github.com/ciooool",
     twitter: "https://x.com",
+    avatar: "/avatar_portrait.jpg",
+    avatarAlt: "/avatar_back.jpg",
   },
 
   ledgerStats: [

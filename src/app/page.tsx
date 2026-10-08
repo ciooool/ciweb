@@ -20,7 +20,8 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
     try {
-      const hasSeen = sessionStorage.getItem('ciooool_lamp_intro_done');
+      const isNoLamp = typeof window !== 'undefined' && window.location.search.includes('nolamp');
+      const hasSeen = sessionStorage.getItem('ciooool_lamp_intro_done') || isNoLamp;
       if (!hasSeen) {
         setLampOpen(true);
       }

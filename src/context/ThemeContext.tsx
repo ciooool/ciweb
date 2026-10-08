@@ -18,7 +18,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const savedTheme = localStorage.getItem("ciweb_theme") as Theme | null;
+      const urlTheme = typeof window !== 'undefined' && window.location.search.includes('theme=light') ? 'light' : null;
+      const savedTheme = urlTheme || (localStorage.getItem("ciweb_theme") as Theme | null);
       if (savedTheme === "light" || savedTheme === "dark") {
         setThemeState(savedTheme);
         document.documentElement.setAttribute("data-theme", savedTheme);
