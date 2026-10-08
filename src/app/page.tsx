@@ -1,3 +1,6 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ZenLibrary from "@/components/ZenLibrary";
@@ -7,21 +10,46 @@ import InteractiveTool from "@/components/InteractiveTool";
 import PlaybookSection from "@/components/PlaybookSection";
 import AboutAndContact from "@/components/AboutAndContact";
 import Footer from "@/components/Footer";
+import CyberLampIntro from "@/components/CyberLampIntro";
+import StarfieldCanvas from "@/components/StarfieldCanvas";
 
 export default function Home() {
-  return (
-    <div className="min-h-screen flex flex-col font-sans">
-      {/* 顶部全局导航 (含日/夜间主题切换) */}
-      <Navbar />
+  // 默认开启，保证首屏直接渲染沉浸式暗室吊灯，避免白屏闪烁
+  const [lampOpen, setLampOpen] = useState(true);
 
-      <main className="flex-1">
+  useEffect(() => {
+    try {
+      const hasSeen = sessionStorage.getItem("ciooool_lamp_intro_done");
+      if (hasSeen === "true") {
+        setLampOpen(false);
+      }
+    } catch {
+      // Ignore private browsing error
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen flex flex-col font-sans relative bg-[#05070F] text-[#EAF0FF]">
+      {/* 赛博朋克深空粒子星辰背景 */}
+      <StarfieldCanvas />
+
+      {/* 可拖拽物理拉绳吊灯开场动画 (Omar Fawzy 风格) */}
+      <CyberLampIntro
+        isOpen={lampOpen}
+        onClose={() => setLampOpen(false)}
+      />
+
+      {/* 顶部全局导航 (含拉灯重温、音效开关、日/夜间主题切换) */}
+      <Navbar onOpenLamp={() => setLampOpen(true)} />
+
+      <main className="flex-1 relative z-10">
         {/* 1. Hero 价值宣言：代码与阅读双轮驱动 */}
         <Hero />
 
-        {/* 2. ZenLib 沉浸式数字禅房 (免费藏书阁、在线阅读器、本周精选、本地拖拽阅读) */}
+        {/* 2. ZenLib 沉浸式数字禅房 (藏书阁、在线阅读器、本周精选) */}
         <ZenLibrary />
 
-        {/* 3. QuoteCraft 灵感金句卡片工坊 (自研专属微工具，杂志级排版，社交裂变) */}
+        {/* 3. QuoteCraft 灵感金句卡片工坊 */}
         <QuoteCardStudio />
 
         {/* 4. 独立产品工坊与实战案例 (SaaS/微工具/开源项目) */}
@@ -33,11 +61,11 @@ export default function Home() {
         {/* 6. 技术深度复盘与洞察专栏 */}
         <PlaybookSection />
 
-        {/* 8. 关于我与全渠道联系转化 */}
+        {/* 7. 关于我与全渠道联系转化 */}
         <AboutAndContact />
       </main>
 
-      {/* 底部版权与 Slogan */}
+      {/* 底部版权 */}
       <Footer />
     </div>
   );

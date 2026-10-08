@@ -3,32 +3,36 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* 暖白宣纸底色，温润雅致，彻底告别生硬死白 */
-  --background: #FAF8F5;
-  --foreground: #2C2A29;
-  --surface-card: #FFFFFF;
-  --surface-card-subtle: #F5F2EC;
-  --border-subtle: #E8E3DA;
-  --primary-accent: #C27D53; /* 温润琥珀陶土 */
-  --secondary-accent: #5F7A6A; /* 莫兰迪鼠尾草绿 */
+  /* 赛博朋克深空黑底色与霓虹电光体系 (Omar Fawzy 风格) */
+  --background: #05070F;
+  --foreground: #EAF0FF;
+  --surface-card: #0A0E1A;
+  --surface-card-subtle: #121829;
+  --border-subtle: #1F2A4D;
+  --phosphor: #5CF2C4; /* 电光薄荷绿 */
+  --violet: #8B7BFF;   /* 极客紫罗兰 */
+  --primary-accent: #5CF2C4;
+  --secondary-accent: #8B7BFF;
 }
 
 .dark {
-  /* 深邃暖砚墨色，非刺眼纯黑，具备东方墨意沉思感 */
-  --background: #181716;
-  --foreground: #EDE9E3;
-  --surface-card: #201F1D;
-  --surface-card-subtle: #272522;
-  --border-subtle: #33302B;
-  --primary-accent: #D89469;
-  --secondary-accent: #789984;
+  --background: #05070F;
+  --foreground: #EAF0FF;
+  --surface-card: #0A0E1A;
+  --surface-card-subtle: #121829;
+  --border-subtle: #1F2A4D;
+  --phosphor: #5CF2C4;
+  --violet: #8B7BFF;
+  --primary-accent: #5CF2C4;
+  --secondary-accent: #8B7BFF;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", STSong, Georgia, serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Space Grotesk", "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
 }
 
 body {
@@ -37,11 +41,40 @@ body {
   font-family: var(--font-sans);
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* 经典书籍排版专用优化 */
 .font-book-serif {
   font-family: var(--font-serif);
+}
+
+/* 霓虹发光文字与特效 */
+.neon-glow-mint {
+  text-shadow: 0 0 16px rgba(92, 242, 196, 0.65), 0 0 32px rgba(92, 242, 196, 0.35);
+}
+
+.neon-glow-violet {
+  text-shadow: 0 0 16px rgba(139, 123, 255, 0.65), 0 0 32px rgba(139, 123, 255, 0.35);
+}
+
+.neon-box-mint {
+  box-shadow: 0 0 20px -3px rgba(92, 242, 196, 0.3), inset 0 0 15px -3px rgba(92, 242, 196, 0.1);
+}
+
+.neon-box-violet {
+  box-shadow: 0 0 20px -3px rgba(139, 123, 255, 0.3), inset 0 0 15px -3px rgba(139, 123, 255, 0.1);
+}
+
+/* 赛博毛玻璃卡片 */
+.cyber-card {
+  background: rgba(10, 14, 26, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(31, 42, 77, 0.8);
+}
+.cyber-card:hover {
+  border-color: rgba(92, 242, 196, 0.45);
+  box-shadow: 0 8px 30px -4px rgba(92, 242, 196, 0.15);
 }
 
 /* 优雅平滑滚动条 */
@@ -50,12 +83,12 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #05070F;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(140, 130, 120, 0.2);
+  background: rgba(92, 242, 196, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(140, 130, 120, 0.4);
+  background: rgba(92, 242, 196, 0.5);
 }

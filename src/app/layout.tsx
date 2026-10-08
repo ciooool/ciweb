@@ -13,18 +13,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ciooool Atelier | 心智书房与独立创造工坊",
+  title: "Ciooool Atelier | 全栈工程与心智书房",
   description:
-    "以代码构建系统，以阅读重塑心智。精选 25+ 部殿堂级心智模型神作深度拆解，与独立全栈系统造物工坊。",
+    "以代码构建系统，以阅读重塑心智。赛博朋克极客风格个人主页与认知心智模型造物工坊。",
   keywords: [
     "Ciooool",
-    "心智书房",
+    "全栈工程师",
     "独立开发者",
-    "Indie Hacker",
-    "全栈工匠",
     "Next.js",
     "Go",
-    "认知模型",
+    "心智模型",
+    "Cyberpunk",
+    "Indie Hacker",
   ],
 };
 
@@ -36,9 +36,9 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased scroll-smooth`}
     >
-      <body className="min-h-full flex flex-col bg-[#FAF8F5] text-[#1F1E1D] dark:bg-[#181716] dark:text-[#EDE9E3] transition-colors selection:bg-[#9E7B5B]/20">
+      <body className="min-h-full flex flex-col bg-[#05070F] text-[#EAF0FF] transition-colors selection:bg-[#5CF2C4]/25 selection:text-[#5CF2C4]">
         {children}
       </body>
     </html>
