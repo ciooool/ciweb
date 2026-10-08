@@ -1,108 +1,161 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  /* 赛博朋克深空黑底色与霓虹电光体系 (Omar Fawzy 风格) */
-  --background: #05070F;
-  --foreground: #EAF0FF;
-  --surface-card: #0A0E1A;
-  --surface-card-subtle: #121829;
-  --border-subtle: #1F2A4D;
-  --phosphor: #5CF2C4; /* 电光薄荷绿 */
-  --violet: #8B7BFF;   /* 极客紫罗兰 */
-  --primary-accent: #5CF2C4;
-  --secondary-accent: #8B7BFF;
+  color-scheme: dark;
+  --bg-base: #070a13;
+  --bg-surface: #0d1424;
+  --bg-surface-elevated: #131c31;
+  --bg-card: rgba(13, 20, 36, 0.78);
+  --border-line: #1e2947;
+  --border-subtle: rgba(92, 242, 196, 0.16);
+  --text-primary: #eaf0ff;
+  --text-secondary: #9fb0d0;
+  --text-muted: #68789d;
+  --phosphor: #5cf2c4;
+  --phosphor-dim: rgba(92, 242, 196, 0.12);
+  --violet: #8b7bff;
+  --violet-dim: rgba(139, 123, 255, 0.12);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lift: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 25px rgba(92, 242, 196, 0.12);
+  --grid-line: rgba(255, 255, 255, 0.025);
+  --aurora-1: rgba(139, 123, 255, 0.24);
+  --aurora-2: rgba(92, 242, 196, 0.18);
+  --navbar-bg: rgba(7, 10, 19, 0.82);
 }
 
-.dark {
-  --background: #05070F;
-  --foreground: #EAF0FF;
-  --surface-card: #0A0E1A;
-  --surface-card-subtle: #121829;
-  --border-subtle: #1F2A4D;
-  --phosphor: #5CF2C4;
-  --violet: #8B7BFF;
-  --primary-accent: #5CF2C4;
-  --secondary-accent: #8B7BFF;
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-base: #f5f7fc;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #edf1fa;
+  --bg-card: rgba(255, 255, 255, 0.88);
+  --border-line: #d7e0f2;
+  --border-subtle: rgba(9, 130, 99, 0.22);
+  --text-primary: #0d1326;
+  --text-secondary: #36425f;
+  --text-muted: #616e8c;
+  --phosphor: #098263;
+  --phosphor-dim: rgba(9, 130, 99, 0.1);
+  --violet: #5444cf;
+  --violet-dim: rgba(84, 68, 207, 0.1);
+  --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.06), 0 10px 24px rgba(15, 23, 42, 0.05);
+  --shadow-lift: 0 10px 30px rgba(15, 23, 42, 0.12), 0 0 20px rgba(9, 130, 99, 0.08);
+  --grid-line: rgba(15, 23, 42, 0.035);
+  --aurora-1: rgba(167, 155, 255, 0.35);
+  --aurora-2: rgba(142, 236, 207, 0.28);
+  --navbar-bg: rgba(245, 247, 252, 0.85);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-primary);
   --font-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", STSong, Georgia, serif;
   --font-sans: "Space Grotesk", "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
-  --font-display: "Space Grotesk", sans-serif;
+}
+
+html {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  transition: background-color 0.35s ease, color 0.35s ease;
+  scroll-behavior: smooth;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
-/* 经典书籍排版专用优化 */
-.font-book-serif {
-  font-family: var(--font-serif);
+/* 语义化组件工具样式 */
+.bg-theme-base {
+  background-color: var(--bg-base);
 }
 
-/* 霓虹发光文字与特效 */
-.neon-glow-mint {
-  text-shadow: 0 0 16px rgba(92, 242, 196, 0.65), 0 0 32px rgba(92, 242, 196, 0.35);
+.bg-theme-surface {
+  background-color: var(--bg-surface);
 }
 
-.neon-glow-violet {
-  text-shadow: 0 0 16px rgba(139, 123, 255, 0.65), 0 0 32px rgba(139, 123, 255, 0.35);
+.bg-theme-card {
+  background-color: var(--bg-card);
 }
 
-.neon-box-mint {
-  box-shadow: 0 0 20px -3px rgba(92, 242, 196, 0.3), inset 0 0 15px -3px rgba(92, 242, 196, 0.1);
+.border-theme-line {
+  border-color: var(--border-line);
 }
 
-.neon-box-violet {
-  box-shadow: 0 0 20px -3px rgba(139, 123, 255, 0.3), inset 0 0 15px -3px rgba(139, 123, 255, 0.1);
+.text-theme-primary {
+  color: var(--text-primary);
 }
 
-/* 赛博毛玻璃卡片 */
-.cyber-card {
-  background: rgba(10, 14, 26, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(31, 42, 77, 0.8);
-}
-.cyber-card:hover {
-  border-color: rgba(92, 242, 196, 0.45);
-  box-shadow: 0 8px 30px -4px rgba(92, 242, 196, 0.15);
+.text-theme-secondary {
+  color: var(--text-secondary);
 }
 
-/* 极光漂移自然关键帧动画 (Replicating Omar Fawzy Aurora) */
-@keyframes drift-a {
+.text-theme-muted {
+  color: var(--text-muted);
+}
+
+.text-theme-phosphor {
+  color: var(--phosphor);
+}
+
+.text-theme-violet {
+  color: var(--violet);
+}
+
+.bg-theme-phosphor {
+  background-color: var(--phosphor);
+}
+
+.bg-theme-violet {
+  background-color: var(--violet);
+}
+
+/* 优雅发光与阴影 */
+.glow-phosphor {
+  box-shadow: 0 0 20px -3px var(--phosphor-dim);
+}
+
+.glow-violet {
+  box-shadow: 0 0 20px -3px var(--violet-dim);
+}
+
+.glow-lift:hover {
+  box-shadow: var(--shadow-lift);
+}
+
+/* 极光自然漂移 */
+@keyframes aurora-flow-1 {
   0%, 100% {
     transform: translate(0, 0) scale(1);
   }
   50% {
-    transform: translate(5vw, 4vw) scale(1.12);
+    transform: translate(6vw, 4vw) scale(1.15);
   }
 }
 
-@keyframes drift-b {
+@keyframes aurora-flow-2 {
   0%, 100% {
     transform: translate(0, 0) scale(1.1);
   }
   50% {
-    transform: translate(-5vw, -3vw) scale(0.95);
+    transform: translate(-5vw, -3vw) scale(0.92);
   }
 }
 
-.animate-drift-a {
-  animation: drift-a 28s ease-in-out infinite;
+.animate-aurora-1 {
+  animation: aurora-flow-1 26s ease-in-out infinite;
 }
 
-.animate-drift-b {
-  animation: drift-b 34s ease-in-out infinite;
+.animate-aurora-2 {
+  animation: aurora-flow-2 32s ease-in-out infinite;
 }
 
 /* 优雅平滑滚动条 */
@@ -111,12 +164,12 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #05070F;
+  background: var(--bg-base);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(92, 242, 196, 0.25);
+  background: var(--border-line);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(92, 242, 196, 0.5);
+  background: var(--phosphor);
 }

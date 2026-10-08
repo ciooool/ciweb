@@ -1,47 +1,48 @@
-import type { Metadata } from "next";
-import { Space_Grotesk, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
-import "./globals.css";
-import CustomCursor from "@/components/CustomCursor";
+import type { Metadata } from 'next';
+import { Space_Grotesk, IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google';
+import './globals.css';
+import { ThemeProvider } from '@/context/ThemeContext';
+import CustomCursor from '@/components/CustomCursor';
 
 const spaceGrotesk = Space_Grotesk({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "700"],
+  variable: '--font-display',
+  subsets: ['latin'],
+  weight: ['500', '700'],
 });
 
 const ibmPlexSans = IBM_Plex_Sans({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  variable: '--font-sans',
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  variable: '--font-mono',
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
 });
 
 export const metadata: Metadata = {
-  title: "Ciooool Atelier | 全栈工程与心智书房",
+  title: 'Ciooool | 高性能全栈架构师 & 认知造物工坊',
   description:
-    "以代码构建系统，以阅读重塑心智。赛博朋克极客风格个人主页与认知心智模型造物工坊。",
+    '以确定性代码抵抗系统熵增，以深刻阅读重塑认知模型。赛博朋克极简作品集与分布式工程工坊。',
   keywords: [
-    "Ciooool",
-    "全栈工程师",
-    "独立开发者",
-    "Next.js",
-    "Go",
-    "心智模型",
-    "Cyberpunk",
-    "Indie Hacker",
+    'Ciooool',
+    '全栈架构师',
+    'Golang',
+    'Next.js',
+    'TypeScript',
+    '分布式系统',
+    '极简作品集',
+    '认知工程',
   ],
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "32x32" },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' },
     ],
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 };
 
@@ -53,12 +54,14 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${spaceGrotesk.variable} ${ibmPlexSans.variable} ${jetbrainsMono.variable} dark h-full antialiased scroll-smooth`}
+      data-theme="dark"
+      className={`${spaceGrotesk.variable} ${ibmPlexSans.variable} ${jetbrainsMono.variable} h-full antialiased scroll-smooth`}
     >
-      <body className="min-h-full flex flex-col bg-[#05070F] text-[#EAF0FF] transition-colors selection:bg-[#5CF2C4]/25 selection:text-[#5CF2C4]">
-        {/* Omar Fawzy 同款拟真互动光标 */}
-        <CustomCursor />
-        {children}
+      <body className="min-h-full flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] selection:bg-[var(--phosphor)] selection:text-[var(--bg-base)] transition-colors duration-300">
+        <ThemeProvider>
+          <CustomCursor />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

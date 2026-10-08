@@ -1,181 +1,189 @@
 "use client";
 
 import React, { useState } from "react";
-import { siteConfig } from "@/data/siteConfig";
-import { Menu, X, Lightbulb, Volume2, VolumeX } from "lucide-react";
-import { GithubIcon } from "@/components/Icons";
-import ThemeToggle from "@/components/ThemeToggle";
+import { portfolioData } from "@/data/portfolioData";
+import { useTheme } from "@/context/ThemeContext";
 import { soundManager } from "@/utils/audio";
+import {
+  Sun,
+  Moon,
+  Volume2,
+  VolumeX,
+  Lightbulb,
+  Menu,
+  X,
+  ArrowUpRight,
+} from "lucide-react";
+import { GithubIcon } from "@/components/Icons";
 
 interface NavbarProps {
   onOpenLamp?: () => void;
 }
 
 export default function Navbar({ onOpenLamp }: NavbarProps) {
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
-  const toggleSound = () => {
+  const handleToggleSound = () => {
     const next = !isMuted;
     setIsMuted(next);
     soundManager.setMuted(next);
+    if (!next) soundManager.playClick();
   };
 
+  const handleThemeChange = () => {
+    soundManager.playClick();
+    toggleTheme();
+  };
+
+  const navLinks = [
+    { href: "#about", label: "关于主理" },
+    { href: "#projects", label: "独立作品" },
+    { href: "#books", label: "心智书房" },
+    { href: "#skills", label: "技术栈" },
+    { href: "#tools", label: "案头工具" },
+    { href: "#contact", label: "见字如面" },
+  ];
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#1F2A4D]/80 bg-[#05070F]/85 backdrop-blur-md transition-colors">
+    <header className="sticky top-0 z-40 w-full border-b border-theme-line backdrop-blur-md transition-colors"
+      style={{ backgroundColor: "var(--navbar-bg)" }}
+    >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
-        {/* Brand / Logo */}
+        {/* Brand Logo */}
         <a href="#" className="flex items-center gap-2.5 group">
           <div className="relative flex items-center justify-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#5CF2C4] shadow-[0_0_10px_#5CF2C4] animate-pulse" />
+            <span className="w-2.5 h-2.5 rounded-full bg-theme-phosphor shadow-[0_0_10px_var(--phosphor)] animate-pulse" />
           </div>
-          <span className="font-mono text-base tracking-wider text-[#EAF0FF] font-semibold group-hover:text-[#5CF2C4] transition-colors">
-            {siteConfig.personal.name}
+          <span className="font-mono text-base tracking-wider text-theme-primary font-bold group-hover:text-theme-phosphor transition-colors">
+            {portfolioData.personal.name}
           </span>
-          <span className="text-[10px] font-mono tracking-widest text-[#8B7BFF] uppercase border-l border-[#1F2A4D] pl-2.5 py-0.5">
-            Dev & Mind
+          <span className="text-[10px] font-mono tracking-widest text-theme-secondary uppercase border-l border-theme-line pl-2.5 py-0.5 hidden sm:inline-block">
+            Architect & Maker
           </span>
         </a>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-mono tracking-wider text-[#9FB0D0]">
-          <a
-            href="#library"
-            className="hover:text-[#5CF2C4] transition-colors"
-          >
-            心智书房
-          </a>
-          <a
-            href="#projects"
-            className="hover:text-[#5CF2C4] transition-colors"
-          >
-            独立作品
-          </a>
-          <a
-            href="#interactive-tool"
-            className="hover:text-[#5CF2C4] transition-colors"
-          >
-            微工具
-          </a>
-          <a
-            href="#quotecraft"
-            className="hover:text-[#5CF2C4] transition-colors"
-          >
-            金句工坊
-          </a>
-          <a
-            href="#contact"
-            className="hover:text-[#5CF2C4] transition-colors"
-          >
-            联络
-          </a>
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-6 text-xs font-mono tracking-wider text-theme-secondary">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="hover:text-theme-phosphor transition-colors"
+            >
+              {link.label}
+            </a>
+          ))}
         </nav>
 
-        {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-2.5">
-          {/* 拉灯体验彩蛋按钮 */}
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* 1. 拉灯体验 */}
           {onOpenLamp && (
             <button
               onClick={() => {
-                soundManager.playLampSwitch();
+                soundManager.playClick();
                 onOpenLamp();
               }}
-              className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#1F2A4D] bg-[#0A0E1A] hover:border-[#5CF2C4]/70 text-[#9FB0D0] hover:text-[#5CF2C4] text-xs font-mono transition-all shadow-xs"
-              title="重新进入暗室拉绳点灯"
+              className="p-2 rounded-xl border border-theme-line hover:border-theme-phosphor text-theme-secondary hover:text-theme-phosphor transition-all bg-theme-surface/50 cursor-pointer hidden sm:flex items-center gap-1.5 text-xs font-mono"
+              title="进入暗室拉灯体验"
             >
-              <Lightbulb className="w-3.5 h-3.5 text-[#8B7BFF] group-hover:text-[#5CF2C4] transition-colors" />
-              <span>拉灯体验</span>
+              <Lightbulb className="w-3.5 h-3.5 text-theme-phosphor" />
+              <span>拉灯</span>
             </button>
           )}
 
-          {/* 音效控制按钮 */}
+          {/* 2. Web Audio 原生合成音效开关 */}
           <button
-            onClick={toggleSound}
-            className="p-1.5 rounded-full border border-[#1F2A4D] bg-[#0A0E1A] text-[#9FB0D0] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/50 transition-all"
-            title={isMuted ? "已静音（点击开启）" : "音效已开启（点击静音）"}
+            onClick={handleToggleSound}
+            className="p-2 rounded-xl border border-theme-line hover:border-theme-phosphor text-theme-secondary hover:text-theme-phosphor transition-all bg-theme-surface/50 cursor-pointer"
+            title={isMuted ? "开启环境音效" : "静音"}
+            aria-label="Sound Toggle"
           >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {isMuted ? (
+              <VolumeX className="w-4 h-4" />
+            ) : (
+              <Volume2 className="w-4 h-4" />
+            )}
           </button>
 
-          <ThemeToggle />
+          {/* 3. 真实有效的白天/黑夜主题切换 */}
+          <button
+            onClick={handleThemeChange}
+            className="p-2 rounded-xl border border-theme-line hover:border-theme-violet text-theme-secondary hover:text-theme-violet transition-all bg-theme-surface/50 cursor-pointer relative group"
+            title={theme === "dark" ? "切换为日间明亮模式" : "切换为极夜深色模式"}
+            aria-label={theme === "dark" ? "切换为白天浅色模式" : "切换为极夜深色模式"}
+            data-testid="theme-toggle"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-amber-400 rotate-0 transition-transform group-hover:rotate-45" />
+            ) : (
+              <Moon className="w-4 h-4 text-indigo-600 rotate-0 transition-transform group-hover:-rotate-12" />
+            )}
+          </button>
 
+          {/* 4. GitHub 链接 */}
           <a
-            href={siteConfig.personal.github}
+            href={portfolioData.personal.github}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1.5 rounded-full border border-[#1F2A4D] bg-[#0A0E1A] text-[#9FB0D0] hover:text-white hover:border-[#5CF2C4]/50 transition-colors"
-            title="GitHub"
+            className="p-2 rounded-xl border border-theme-line hover:border-theme-phosphor text-theme-secondary hover:text-theme-primary transition-all bg-theme-surface/50 hidden sm:inline-flex"
+            title="GitHub 个人主页"
           >
-            <GithubIcon className="h-3.5 w-3.5" />
+            <GithubIcon className="w-4 h-4" />
           </a>
 
+          {/* 5. 立即联络 CTA 胶囊按钮 */}
           <a
             href="#contact"
-            className="inline-flex items-center px-3.5 py-1.5 rounded-full border border-[#5CF2C4]/50 bg-[#5CF2C4]/10 text-xs font-mono tracking-wider text-[#5CF2C4] hover:bg-[#5CF2C4]/20 hover:shadow-[0_0_15px_rgba(92,242,196,0.3)] transition-all"
+            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-theme-phosphor text-[#070a13] text-xs font-mono font-bold hover:opacity-90 hover:shadow-[0_0_15px_var(--phosphor)] transition-all ml-1 shadow-sm"
           >
-            <span>交流造物</span>
+            <span>联络</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </a>
-        </div>
 
-        {/* Mobile menu button */}
-        <div className="flex md:hidden items-center gap-2">
-          {onOpenLamp && (
-            <button
-              onClick={onOpenLamp}
-              className="p-2 rounded-lg text-[#5CF2C4] hover:bg-[#5CF2C4]/10"
-              title="拉灯体验"
-            >
-              <Lightbulb className="h-5 w-5" />
-            </button>
-          )}
+          {/* 移动端汉堡菜单 */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-[#9FB0D0] hover:text-white"
+            className="md:hidden p-2 rounded-xl border border-theme-line text-theme-secondary hover:text-theme-primary transition-colors ml-1"
+            aria-label="Toggle Navigation Menu"
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? (
+              <X className="w-4 h-4" />
+            ) : (
+              <Menu className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* 移动端菜单抽屉 */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-[#1F2A4D] bg-[#0A0E1A] px-4 py-6 font-mono space-y-4 text-sm tracking-wider">
-          <a
-            href="#library"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-[#9FB0D0] hover:text-[#5CF2C4]"
-          >
-            心智书房
-          </a>
-          <a
-            href="#projects"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-[#9FB0D0] hover:text-[#5CF2C4]"
-          >
-            独立作品
-          </a>
-          <a
-            href="#interactive-tool"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-[#9FB0D0] hover:text-[#5CF2C4]"
-          >
-            在线微工具
-          </a>
-          <a
-            href="#quotecraft"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-[#9FB0D0] hover:text-[#5CF2C4]"
-          >
-            金句工坊
-          </a>
-          <a
-            href="#contact"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-[#9FB0D0] hover:text-[#5CF2C4]"
-          >
-            交流造物
-          </a>
+        <div className="md:hidden border-b border-theme-line bg-theme-surface px-6 py-6 font-mono space-y-4 text-sm tracking-wider shadow-xl animate-in slide-in-from-top-2 duration-200">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-theme-secondary hover:text-theme-phosphor py-1 transition-colors"
+            >
+              {link.label}
+            </a>
+          ))}
+          {onOpenLamp && (
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenLamp();
+              }}
+              className="flex items-center gap-2 text-theme-phosphor pt-2 border-t border-theme-line w-full text-left"
+            >
+              <Lightbulb className="w-4 h-4" />
+              <span>拉灯开场体验</span>
+            </button>
+          )}
         </div>
       )}
     </header>

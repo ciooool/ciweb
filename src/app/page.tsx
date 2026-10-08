@@ -1,67 +1,78 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import Navbar from "@/components/Navbar";
-import Hero from "@/components/Hero";
-import ZenLibrary from "@/components/ZenLibrary";
-import QuoteCardStudio from "@/components/QuoteCardStudio";
-import ProjectShowcase from "@/components/ProjectShowcase";
-import InteractiveTool from "@/components/InteractiveTool";
-import AboutAndContact from "@/components/AboutAndContact";
-import Footer from "@/components/Footer";
-import CyberLampIntro from "@/components/CyberLampIntro";
-import CyberBackground from "@/components/CyberBackground";
+import React, { useState, useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import Hero from '@/components/Hero';
+import AboutSection from '@/components/AboutSection';
+import ProjectsSection from '@/components/ProjectsSection';
+import BookshelfSection from '@/components/BookshelfSection';
+import { InteractiveLab } from '@/components/InteractiveLab';
+import { ContactSection } from '@/components/ContactSection';
+import Footer from '@/components/Footer';
+import LampPullRig from '@/components/LampPullRig';
+import AmbientBackground from '@/components/AmbientBackground';
 
 export default function Home() {
-  // 默认开启，保证首屏直接渲染沉浸式暗室吊灯，避免白屏闪烁
-  const [lampOpen, setLampOpen] = useState(true);
+  const [lampOpen, setLampOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     try {
-      const hasSeen = sessionStorage.getItem("ciooool_lamp_intro_done");
-      if (hasSeen === "true") {
-        setLampOpen(false);
+      const hasSeen = sessionStorage.getItem('ciooool_lamp_intro_done');
+      if (!hasSeen) {
+        setLampOpen(true);
       }
     } catch {
-      // Ignore private browsing error
+      // sessionStorage unavailable
     }
   }, []);
 
+  const handleCloseLamp = () => {
+    setLampOpen(false);
+    try {
+      sessionStorage.setItem('ciooool_lamp_intro_done', 'true');
+    } catch {}
+  };
+
   return (
-    <div className="min-h-screen flex flex-col font-sans relative bg-[#05070F] text-[#EAF0FF]">
-      {/* 赛博朋克深空背景：流动双色极光 + 星辰画布 + 微光网格 (Omar Fawzy 风格) */}
-      <CyberBackground />
+    <div className="min-h-screen flex flex-col relative bg-[var(--bg-base)] text-[var(--text-primary)] transition-colors duration-300 overflow-x-hidden selection:bg-[var(--phosphor)] selection:text-[var(--bg-base)]">
+      {/* 1. 自适应全屏环境背景 (极光 + 星空画布 + 微光网格) */}
+      <AmbientBackground />
 
-      {/* 可拖拽物理拉绳吊灯开场动画 (Omar Fawzy 风格) */}
-      <CyberLampIntro
-        isOpen={lampOpen}
-        onClose={() => setLampOpen(false)}
-      />
+      {/* 2. 拟真物理拉绳吊灯组件 (开场沉浸式体验 / 顶栏可随时重温) */}
+      {isClient && (
+        <LampPullRig
+          isOpen={lampOpen}
+          onClose={handleCloseLamp}
+        />
+      )}
 
-      {/* 顶部全局导航 (含拉灯重温、音效开关、日/夜间主题切换) */}
+      {/* 3. 悬浮极简顶栏 (昼夜切换 / 物理拉灯 / 音效开关 / 快速导航) */}
       <Navbar onOpenLamp={() => setLampOpen(true)} />
 
-      <main className="flex-1 relative">
-        {/* 1. Hero 价值宣言：代码与阅读双轮驱动 */}
+      {/* 4. 核心内容板块 */}
+      <main className="flex-1 relative z-10">
+        {/* 01. 首屏价值宣言与工程账本 */}
         <Hero />
 
-        {/* 2. ZenLib 沉浸式数字禅房 (藏书阁、在线阅读器、本周精选) */}
-        <ZenLibrary />
+        {/* 02. 主理人自白、造物法则与主力技术栈 */}
+        <AboutSection />
 
-        {/* 3. QuoteCraft 灵感金句卡片工坊 */}
-        <QuoteCardStudio />
+        {/* 03. 独立作品工坊实战项目 */}
+        <ProjectsSection />
 
-        {/* 4. 独立产品工坊与实战案例 (SaaS/微工具/开源项目) */}
-        <ProjectShowcase />
+        {/* 04. 殿堂级精选著作认知书房 (腾讯官方微信读书 200 OK 直达) */}
+        <BookshelfSection />
 
-        {/* 5. 在线即时交互开发工具 (DevForge: JSON转Go / Token生成器) */}
-        <InteractiveTool />
+        {/* 05. 案头工程微工具 (JSON转Go / 高熵Token生成) */}
+        <InteractiveLab />
 
-        {/* 6. 关于我与全渠道联系转化 */}
-        <AboutAndContact />
+        {/* 06. 见字如面全渠道联络 */}
+        <ContactSection />
       </main>
 
-      {/* 底部版权 */}
+      {/* 5. 极简页脚 */}
       <Footer />
     </div>
   );
