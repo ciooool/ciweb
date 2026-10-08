@@ -7,11 +7,18 @@ import { GithubIcon, TwitterIcon } from "@/components/Icons";
 
 export default function AboutAndContact() {
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedWechat, setCopiedWechat] = useState(false);
 
   const copyEmail = () => {
     navigator.clipboard.writeText(siteConfig.personal.email);
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2000);
+  };
+
+  const copyWechat = () => {
+    navigator.clipboard.writeText("ciooool_dev");
+    setCopiedWechat(true);
+    setTimeout(() => setCopiedWechat(false), 2000);
   };
 
   return (
@@ -105,9 +112,22 @@ export default function AboutAndContact() {
                 <span className="text-xs font-mono text-[#7D88AA] block mb-1.5">
                   微信即时交流
                 </span>
-                <div className="flex items-center gap-2.5 p-3.5 rounded-xl border border-[#1F2A4D] bg-[#05070F] text-[#9FB0D0] text-xs font-mono">
-                  <MessageCircle className="h-4 w-4 text-[#8B7BFF] shrink-0" />
-                  <span>{siteConfig.personal.wechatQrNote}</span>
+                <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#1F2A4D] bg-[#05070F] text-[#9FB0D0] text-xs font-mono">
+                  <div className="flex items-center gap-2.5 truncate">
+                    <MessageCircle className="h-4 w-4 text-[#8B7BFF] shrink-0" />
+                    <span className="truncate">{siteConfig.personal.wechatQrNote}</span>
+                  </div>
+                  <button
+                    onClick={copyWechat}
+                    className="p-1.5 rounded-lg text-[#9FB0D0] hover:text-[#5CF2C4] hover:bg-[#1F2A4D]/40 transition-colors shrink-0"
+                    title="复制微信号"
+                  >
+                    {copiedWechat ? (
+                      <Check className="h-4 w-4 text-[#5CF2C4]" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 

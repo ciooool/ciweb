@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Book, BookChapter } from "@/data/libraryData";
 import {
   X,
@@ -34,11 +35,21 @@ export default function ZenReaderModal({
   const [fontSize, setFontSize] = useState<number>(17); // 15 - 22
   const [theme, setTheme] = useState<ReadingTheme>("sepia");
   const [showToc, setShowToc] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // 动态章节正文缓存：避免反复拉取
   const [dynamicChaptersContent, setDynamicChaptersContent] = useState<Record<number, string>>({});
   const [isLoadingChapter, setIsLoadingChapter] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    const origOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = origOverflow;
+    };
+  }, []);
 
   // Load user reading preferences
   useEffect(() => {
@@ -201,9 +212,11 @@ export default function ZenReaderModal({
   const activeContent =
     dynamicChaptersContent[currentChapterIndex] || currentChapter.content || "";
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex flex-col ${currentThemeConfig.bg} ${currentThemeConfig.text} transition-colors duration-200 select-text overflow-hidden`}
+      className={`fixed inset-0 z-[100] flex flex-col ${currentThemeConfig.bg} ${currentThemeConfig.text} transition-colors duration-200 select-text overflow-hidden`}
     >
       {/* 顶栏控制台 */}
       <header
@@ -436,6 +449,7 @@ export default function ZenReaderModal({
           </div>
         </article>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

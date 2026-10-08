@@ -41,7 +41,7 @@ export default function Home() {
       {/* 顶部全局导航 (含拉灯重温、音效开关、日/夜间主题切换) */}
       <Navbar onOpenLamp={() => setLampOpen(true)} />
 
-      <main className="flex-1 relative z-10">
+      <main className="flex-1 relative">
         {/* 1. Hero 价值宣言：代码与阅读双轮驱动 */}
         <Hero />
 

@@ -6,9 +6,9 @@ import { ArrowRight, BookOpen, Terminal, Sparkles, Code2 } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden pt-16 pb-20 md:pt-28 md:pb-32 border-b border-[#1F2A4D]/80">
+    <section className="relative overflow-hidden pt-24 sm:pt-28 md:pt-32 pb-20 md:pb-32 border-b border-[#1F2A4D]/80">
       {/* 极光背景漫射光晕 (Cyber Aurora) */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-[#8B7BFF]/15 via-[#5CF2C4]/10 to-transparent blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[600px] h-[350px] bg-gradient-to-tr from-[#8B7BFF]/15 via-[#5CF2C4]/10 to-transparent blur-[120px] pointer-events-none" />
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start max-w-3xl">

@@ -15,6 +15,7 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
   const [flickerLevel, setFlickerLevel] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -36,6 +37,43 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
   useEffect(() => {
     isLitRef.current = isLit;
   }, [isLit]);
+
+  // 进入工坊 (平滑仪式感过渡)
+  const handleEnterPortfolio = useCallback(() => {
+    if (isExiting) return;
+    setIsExiting(true);
+    soundManager.playClick();
+    try {
+      sessionStorage.setItem("ciooool_lamp_intro_done", "true");
+    } catch {
+      // Ignore
+    }
+    setTimeout(() => {
+      onClose();
+      setIsExiting(false);
+    }, 600);
+  }, [isExiting, onClose]);
+
+  // 键盘快捷支持 (Enter/Space拉灯开灯，ESC跳过进入)
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsExiting(false);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleEnterPortfolio();
+      } else if (e.key === "Enter" || e.key === " ") {
+        if (!isLitRef.current) {
+          toggleLamp();
+          startSpringAnimation();
+        } else {
+          handleEnterPortfolio();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, handleEnterPortfolio]);
 
   // 阻尼弹簧跳动回弹动画 (2D Damped Harmonic Spring Simulation)
   const startSpringAnimation = useCallback(() => {
@@ -178,16 +216,6 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
     window.addEventListener("pointerup", onPointerUp);
   };
 
-  // 进入工坊
-  const handleEnterPortfolio = () => {
-    try {
-      sessionStorage.setItem("ciooool_lamp_intro_done", "true");
-    } catch {
-      // Ignore
-    }
-    onClose();
-  };
-
   useEffect(() => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -207,7 +235,9 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center select-none overflow-hidden transition-colors duration-700"
+      className={`fixed inset-0 z-50 flex items-center justify-center select-none overflow-hidden transition-all duration-700 ease-out ${
+        isExiting ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
+      }`}
       style={{
         backgroundColor: "#05070F",
         background: isLit
@@ -567,7 +597,7 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
               </button>
             </div>
             <p className="text-[11px] font-mono text-[#7D88AA] mt-2">
-              可继续下拉拉绳关灯，或点击上方进入
+              可继续下拉拉绳关灯，或按 Enter 键直接进入
             </p>
           </div>
         ) : (
@@ -576,7 +606,7 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
               CIOOOUL ATELIER
             </h2>
             <p className="text-xs font-mono text-[#7D88AA]">
-              按住鼠标下拉拉绳开灯 · 松手点亮
+              按住鼠标下拉拉绳开灯 · 松手点亮 (支持 Enter 键)
             </p>
           </div>
         )}

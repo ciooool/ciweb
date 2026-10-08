@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CuratorBook } from "@/data/curatorBooks";
 import ZenBookCover from "@/components/ZenBookCover";
 import {
@@ -32,14 +33,21 @@ export default function BookInsightModal({
   onClose,
 }: BookInsightModalProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // 监听 ESC 键关闭
   useEffect(() => {
+    setMounted(true);
+    const origOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = origOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [onClose]);
 
   const handleCopyQuote = (text: string, idx: number) => {
@@ -48,8 +56,10 @@ export default function BookInsightModal({
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 md:p-10 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 md:p-10 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div
         className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-[#0A0E1A] border border-[#1F2A4D] shadow-2xl overflow-hidden select-text text-[#EAF0FF]"
         style={{
@@ -304,6 +314,7 @@ export default function BookInsightModal({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
