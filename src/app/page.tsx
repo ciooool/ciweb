@@ -11,6 +11,7 @@ import { ContactSection } from '@/components/ContactSection';
 import Footer from '@/components/Footer';
 import LampPullRig from '@/components/LampPullRig';
 import AmbientBackground from '@/components/AmbientBackground';
+import StreetCanvas from '@/components/StreetCanvas';
 
 export default function Home() {
   const [lampOpen, setLampOpen] = useState(false);
@@ -70,6 +71,9 @@ export default function Home() {
 
         {/* 06. 见字如面全渠道联络 */}
         <ContactSection />
+
+        {/* 07. 底部横向赛博都市天际线与穿梭车流 */}
+        <StreetCanvas />
       </main>
 
       {/* 5. 极简页脚 */}
