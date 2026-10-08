@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { siteConfig } from "@/data/siteConfig";
-import { Terminal, Menu, X, ArrowUpRight, BookOpen } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { GithubIcon } from "@/components/Icons";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -10,140 +10,138 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/80 transition-colors">
+    <header className="sticky top-0 z-40 w-full border-b border-[#EAE6DF] dark:border-[#2C2A28] bg-[#FAF8F5]/90 dark:bg-[#181716]/90 backdrop-blur-md transition-colors">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand / Logo */}
-        <a href="#" className="flex items-center gap-2 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm transition-transform group-hover:scale-105">
-            <Terminal className="h-5 w-5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-base tracking-tight text-zinc-900 dark:text-white flex items-center gap-1.5">
-              {siteConfig.personal.name}
-              <span className="text-xs font-mono font-normal px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                .dev
-              </span>
-            </span>
-          </div>
+        
+        {/* Brand / Logo (极简典雅宋体签名) */}
+        <a href="#" className="flex items-center gap-2.5 group">
+          <span className="font-serif text-lg tracking-wider text-[#1F1E1D] dark:text-[#EDE9E3] font-medium group-hover:opacity-80 transition-opacity">
+            {siteConfig.personal.name}
+          </span>
+          <span className="text-[10px] font-mono tracking-widest text-[#948F86] uppercase border-l border-[#D5CEBF] dark:border-[#38342E] pl-2.5">
+            Atelier
+          </span>
         </a>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-          <a href="#library" className="hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
-            <BookOpen className="h-4 w-4" />
-            <span>数字书房</span>
+        {/* Desktop Nav (文学排版，克制素雅) */}
+        <nav className="hidden md:flex items-center gap-7 text-xs font-serif tracking-widest text-[#6B6760] dark:text-[#A8A49C]">
+          <a
+            href="#library"
+            className="hover:text-[#1F1E1D] dark:hover:text-[#EDE9E3] transition-colors"
+          >
+            心智书房
           </a>
-          <a href="#projects" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
-            作品工坊
+          <a
+            href="#projects"
+            className="hover:text-[#1F1E1D] dark:hover:text-[#EDE9E3] transition-colors"
+          >
+            独立作品
           </a>
-          <a href="#interactive-tool" className="hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1">
-            <span>在线工具</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <a
+            href="#interactive-tool"
+            className="hover:text-[#1F1E1D] dark:hover:text-[#EDE9E3] transition-colors"
+          >
+            在线微工具
           </a>
-          <a href="#services" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
-            服务与咨询
+          <a
+            href="#quotecraft"
+            className="hover:text-[#1F1E1D] dark:hover:text-[#EDE9E3] transition-colors"
+          >
+            金句工坊
           </a>
-          <a href="#playbook" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+          <a
+            href="#playbook"
+            className="hover:text-[#1F1E1D] dark:hover:text-[#EDE9E3] transition-colors"
+          >
             实战复盘
           </a>
-          <a href="#contact" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
-            关于我
+          <a
+            href="#contact"
+            className="hover:text-[#1F1E1D] dark:hover:text-[#EDE9E3] transition-colors"
+          >
+            致友
           </a>
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-2">
-          {/* Day/Night Theme Switcher */}
+        <div className="hidden md:flex items-center gap-3">
           <ThemeToggle />
 
           <a
             href={siteConfig.personal.github}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
-            title="GitHub Profile"
+            className="p-1.5 text-[#6B6760] hover:text-[#1F1E1D] dark:text-[#A8A49C] dark:hover:text-white transition-colors"
+            title="GitHub"
           >
-            <GithubIcon className="h-5 w-5" />
+            <GithubIcon className="h-4 w-4" />
           </a>
+
           <a
             href="#contact"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-all hover:shadow"
+            className="inline-flex items-center px-3.5 py-1.5 rounded-full border border-[#D5CEBF] dark:border-[#38342E] text-xs font-serif tracking-wider text-[#1F1E1D] dark:text-[#EDE9E3] hover:bg-black/5 dark:hover:bg-white/5 transition-all"
           >
-            <span>预约咨询</span>
-            <ArrowUpRight className="h-3.5 w-3.5" />
+            <span>书信联络</span>
           </a>
         </div>
 
         {/* Mobile menu button */}
-        <div className="flex md:hidden items-center gap-1">
+        <div className="flex md:hidden items-center gap-2">
           <ThemeToggle />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            aria-label="Toggle Menu"
+            className="p-2 rounded-lg text-[#6B6760] hover:text-[#1F1E1D] dark:text-[#A8A49C] dark:hover:text-white"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-zinc-200 bg-white px-4 pt-3 pb-5 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex flex-col space-y-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            <a
-              href="#library"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5"
-            >
-              <BookOpen className="h-4 w-4" />
-              <span>数字书房 (在线阅读)</span>
-            </a>
-            <a
-              href="#projects"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-zinc-950 dark:hover:text-white"
-            >
-              作品工坊
-            </a>
-            <a
-              href="#interactive-tool"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-zinc-950 dark:hover:text-white"
-            >
-              在线工具 (实时交互)
-            </a>
-            <a
-              href="#services"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-zinc-950 dark:hover:text-white"
-            >
-              服务与咨询
-            </a>
-            <a
-              href="#playbook"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-zinc-950 dark:hover:text-white"
-            >
-              实战复盘
-            </a>
-            <a
-              href="#contact"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-zinc-950 dark:hover:text-white"
-            >
-              关于我 & 联系
-            </a>
-            <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
-              <a
-                href="#contact"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center rounded-lg bg-zinc-900 py-2.5 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
-              >
-                即刻联系 / 预约咨询
-              </a>
-            </div>
-          </div>
+        <div className="md:hidden border-b border-[#EAE6DF] dark:border-[#2C2A28] bg-[#FAF8F5] dark:bg-[#181716] px-4 py-6 font-serif space-y-4 text-sm tracking-wider">
+          <a
+            href="#library"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-[#6B6760] dark:text-[#A8A49C] hover:text-[#1F1E1D]"
+          >
+            心智书房
+          </a>
+          <a
+            href="#projects"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-[#6B6760] dark:text-[#A8A49C] hover:text-[#1F1E1D]"
+          >
+            独立作品
+          </a>
+          <a
+            href="#interactive-tool"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-[#6B6760] dark:text-[#A8A49C] hover:text-[#1F1E1D]"
+          >
+            在线微工具
+          </a>
+          <a
+            href="#quotecraft"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-[#6B6760] dark:text-[#A8A49C] hover:text-[#1F1E1D]"
+          >
+            金句工坊
+          </a>
+          <a
+            href="#playbook"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-[#6B6760] dark:text-[#A8A49C] hover:text-[#1F1E1D]"
+          >
+            实战复盘
+          </a>
+          <a
+            href="#contact"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-[#6B6760] dark:text-[#A8A49C] hover:text-[#1F1E1D]"
+          >
+            致友
+          </a>
         </div>
       )}
     </header>

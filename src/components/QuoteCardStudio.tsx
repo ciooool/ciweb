@@ -89,21 +89,26 @@ export default function QuoteCardStudio() {
   const currentStyle = themeStyles[theme];
 
   return (
-    <section className="py-20 md:py-24 border-b border-[#E8E3DA] dark:border-[#33302B] transition-colors">
+    <section id="quotecraft" className="py-20 md:py-28 border-b border-[#EAE6DF] dark:border-[#2C2A28] transition-colors">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-serif bg-[#F5F2EC] text-[#C27D53] dark:bg-[#201F1D] dark:text-[#D89469] border border-[#E8E3DA] dark:border-[#33302B] mb-3">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>自研专属工具 · 灵感金句卡片工坊</span>
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+          <div>
+            <div className="inline-flex items-center gap-2 text-xs font-serif tracking-widest text-[#9E7B5B] uppercase mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#9E7B5B]" />
+              <span>灵感金句 · 纸墨排印</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-serif font-normal text-[#1F1E1D] dark:text-[#EDE9E3] tracking-tight">
+              金句工坊与排印卡片
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-[#6B6760] dark:text-[#A8A49C] max-w-2xl font-serif leading-relaxed">
+              研读至深处的刹那触动，一键凝练为温润素雅的案头名句卡片，供沉思自省与随手分享。
+            </p>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-book-serif font-normal text-[#2C2A29] dark:text-[#EDE9E3]">
-            QuoteCraft 灵感卡片工坊
-          </h2>
-          <p className="mt-2 text-sm sm:text-base text-[#6E6B65] dark:text-[#A8A49C] font-serif leading-relaxed">
-            研读至深处的刹那触动？一键化为杂志级排版卡片，自带个人独立品牌水印，静心分享。
-          </p>
+          <div className="mt-4 md:mt-0 text-xs font-mono tracking-wider text-[#948F86]">
+            EDITORIAL CARD CRAFT
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
@@ -172,37 +177,37 @@ export default function QuoteCardStudio() {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => setTheme("xuan")}
-                  className={`py-2 px-3 rounded-xl text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
+                  className={`py-2 px-3 rounded-lg text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
                     theme === "xuan"
-                      ? "bg-[#FAF6F0] text-[#2B2A27] border-[#C27D53] font-bold shadow-2xs"
-                      : "bg-white dark:bg-[#201F1D] text-[#6E6B65] border-[#E8E3DA] dark:border-[#33302B]"
+                      ? "bg-[#FAF6F0] text-[#1F1E1D] border-[#1F1E1D] dark:border-[#EDE9E3] font-medium shadow-2xs"
+                      : "bg-white dark:bg-[#201F1D] text-[#6B6760] border-[#EAE6DF] dark:border-[#38342E]"
                   }`}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#FAF6F0] border border-[#C27D53]"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#FAF6F0] border border-[#9E7B5B]" />
                   <span>宣纸温白</span>
                 </button>
 
                 <button
                   onClick={() => setTheme("inkstone")}
-                  className={`py-2 px-3 rounded-xl text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
+                  className={`py-2 px-3 rounded-lg text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
                     theme === "inkstone"
-                      ? "bg-[#1C1B1A] text-white border-zinc-500 font-bold shadow-2xs"
-                      : "bg-white dark:bg-[#201F1D] text-[#6E6B65] border-[#E8E3DA] dark:border-[#33302B]"
+                      ? "bg-[#1C1B1A] text-white border-[#1C1B1A] dark:border-[#EDE9E3] font-medium shadow-2xs"
+                      : "bg-white dark:bg-[#201F1D] text-[#6B6760] border-[#EAE6DF] dark:border-[#38342E]"
                   }`}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#1C1B1A] border border-zinc-400"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#1C1B1A] border border-zinc-400" />
                   <span>深砚夜读</span>
                 </button>
 
                 <button
                   onClick={() => setTheme("tea")}
-                  className={`py-2 px-3 rounded-xl text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
+                  className={`py-2 px-3 rounded-lg text-xs font-serif flex items-center justify-center gap-1.5 transition-all border ${
                     theme === "tea"
-                      ? "bg-[#F0F4F0] text-[#2F3E32] border-[#5F7A6A] font-bold shadow-2xs"
-                      : "bg-white dark:bg-[#201F1D] text-[#6E6B65] border-[#E8E3DA] dark:border-[#33302B]"
+                      ? "bg-[#F0F4F0] text-[#2F3E32] border-[#2F3E32] dark:border-[#EDE9E3] font-medium shadow-2xs"
+                      : "bg-white dark:bg-[#201F1D] text-[#6B6760] border-[#EAE6DF] dark:border-[#38342E]"
                   }`}
                 >
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#F0F4F0] border border-[#5F7A6A]"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#F0F4F0] border border-[#7A9482]" />
                   <span>雨后春茶</span>
                 </button>
               </div>
@@ -211,23 +216,23 @@ export default function QuoteCardStudio() {
             <div className="pt-2">
               <button
                 onClick={handleCopyText}
-                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#2C2A29] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif font-semibold hover:opacity-90 transition-opacity shadow-xs"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#1F1E1D] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif hover:bg-[#33312E] dark:hover:bg-white transition-all shadow-2xs"
               >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                <span>{copied ? "已复制到剪贴板！" : "复制金句卡片文案"}</span>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4 opacity-70" />}
+                <span>{copied ? "已复制到剪贴板" : "复制金句卡片文案"}</span>
               </button>
             </div>
           </div>
 
           {/* Right Column: Card Preview (7 cols) */}
           <div className="lg:col-span-7 flex flex-col items-center justify-center">
-            <div className="text-[11px] font-serif text-[#8C8881] mb-2 flex items-center gap-1.5">
+            <div className="text-[11px] font-serif text-[#948F86] mb-2 flex items-center gap-1.5">
               <span>实时卡片排版预览</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-[#C27D53]"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#9E7B5B]" />
             </div>
 
             <div
-              className={`w-full max-w-lg rounded-3xl p-8 sm:p-12 border ${currentStyle.border} ${currentStyle.cardBg} ${currentStyle.text} relative overflow-hidden transition-all duration-300 flex flex-col justify-between min-h-[320px] select-text`}
+              className={`w-full max-w-lg rounded-2xl p-8 sm:p-12 border ${currentStyle.border} ${currentStyle.cardBg} ${currentStyle.text} relative overflow-hidden transition-all duration-300 flex flex-col justify-between min-h-[320px] select-text`}
             >
               <div className={`absolute top-4 right-5 ${currentStyle.quoteIcon} pointer-events-none`}>
                 <Quote className="h-14 w-14 opacity-40" />

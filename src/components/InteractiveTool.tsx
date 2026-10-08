@@ -94,55 +94,59 @@ export default function InteractiveTool() {
   };
 
   return (
-    <section id="interactive-tool" className="py-16 md:py-24 bg-zinc-50/60 dark:bg-zinc-950/40 border-b border-zinc-200/60 dark:border-zinc-800/60">
+    <section id="interactive-tool" className="py-20 md:py-28 border-b border-[#EAE6DF] dark:border-[#2C2A28] transition-colors">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 mb-3">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>现场可玩的微工具 Showcase</span>
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+          <div>
+            <div className="inline-flex items-center gap-2 text-xs font-serif tracking-widest text-[#9E7B5B] uppercase mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#9E7B5B]" />
+              <span>案头微工具 · 离线计算</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-serif font-normal text-[#1F1E1D] dark:text-[#EDE9E3] tracking-tight">
+              工坊即时工具
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-[#6B6760] dark:text-[#A8A49C] max-w-2xl font-serif leading-relaxed">
+              纯前端本地隐私计算，无服务端记录。解决日常编码中的高频结构体转换与加密密钥需求。
+            </p>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-            DevForge 开发者即时工坊
-          </h2>
-          <p className="mt-2 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
-            纯前端纯本地隐私计算，无服务端记录。随时随地解决日常编码中的高频重复操作。
-          </p>
+          <div className="mt-4 md:mt-0 text-xs font-mono tracking-wider text-[#948F86]">
+            CLIENT-SIDE ENGINE · 零外部依赖
+          </div>
         </div>
 
         {/* Tool Shell Container */}
-        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-[#EAE6DF] dark:border-[#2C2A28] bg-white dark:bg-[#1E1E20] shadow-2xs overflow-hidden">
           {/* Top Bar Navigation */}
-          <div className="flex flex-wrap items-center justify-between border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 bg-zinc-50/80 dark:bg-zinc-900/80">
+          <div className="flex flex-wrap items-center justify-between border-b border-[#EAE6DF] dark:border-[#2C2A28] px-4 py-3 bg-[#FAF8F5]/80 dark:bg-[#201F1D]/80">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab("json2go")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-serif transition-all ${
                   activeTab === "json2go"
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                    ? "bg-[#1F1E1D] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] shadow-2xs"
+                    : "text-[#6B6760] hover:text-[#1F1E1D] dark:text-[#A8A49C] dark:hover:text-white"
                 }`}
               >
-                <Terminal className="h-3.5 w-3.5" />
+                <Terminal className="h-3.5 w-3.5 opacity-70" />
                 <span>JSON 转 Go Struct</span>
               </button>
 
               <button
                 onClick={() => setActiveTab("tokenGen")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-serif transition-all ${
                   activeTab === "tokenGen"
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                    ? "bg-[#1F1E1D] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] shadow-2xs"
+                    : "text-[#6B6760] hover:text-[#1F1E1D] dark:text-[#A8A49C] dark:hover:text-white"
                 }`}
               >
-                <KeyRound className="h-3.5 w-3.5" />
-                <span>安全密钥 / API Token 生成器</span>
+                <KeyRound className="h-3.5 w-3.5 opacity-70" />
+                <span>安全密钥 / Token 生成</span>
               </button>
             </div>
 
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span>Client-side Engine Ready</span>
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-serif text-[#948F86]">
+              <span>本地沙箱环境就绪</span>
             </div>
           </div>
 
@@ -151,27 +155,27 @@ export default function InteractiveTool() {
             <div className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">结构体名称:</span>
+                  <span className="text-xs font-serif text-[#6B6760] dark:text-[#A8A49C]">结构体名称:</span>
                   <input
                     type="text"
                     value={structName}
                     onChange={(e) => setStructName(e.target.value)}
                     placeholder="StructName"
-                    className="px-2.5 py-1 text-xs font-mono rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    className="px-2.5 py-1 text-xs font-mono rounded border border-[#EAE6DF] dark:border-[#38342E] bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-hidden focus:border-[#1F1E1D]"
                   />
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   <button
                     onClick={() => setJsonInput(defaultJson)}
-                    className="text-xs text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 underline"
+                    className="text-xs font-serif text-[#948F86] hover:text-[#1F1E1D] dark:hover:text-white underline"
                   >
                     重置为示例
                   </button>
                   <button
                     onClick={() => handleCopy(goStructOutput)}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1F1E1D] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif hover:bg-[#33312E] dark:hover:bg-white transition-colors"
                   >
-                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? <Check className="h-3.5 w-3.5 text-[#9E7B5B]" /> : <Copy className="h-3.5 w-3.5 opacity-70" />}
                     <span>{copied ? "已复制" : "复制代码"}</span>
                   </button>
                 </div>
@@ -180,26 +184,26 @@ export default function InteractiveTool() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Left: JSON Input */}
                 <div className="flex flex-col">
-                  <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center justify-between">
+                  <div className="text-xs font-serif text-[#6B6760] dark:text-[#A8A49C] mb-1.5 flex items-center justify-between">
                     <span>原始 JSON 输入</span>
-                    <span className="font-mono text-[11px] text-zinc-400">JSON Payload</span>
+                    <span className="font-mono text-[10px] text-[#948F86]">JSON Payload</span>
                   </div>
                   <textarea
                     value={jsonInput}
                     onChange={(e) => setJsonInput(e.target.value)}
                     rows={12}
                     placeholder="在此粘贴任意 JSON 对象..."
-                    className="w-full font-mono text-xs p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-1 focus:ring-blue-500 resize-none"
+                    className="w-full font-mono text-xs p-3 rounded-xl border border-[#EAE6DF] dark:border-[#38342E] bg-[#FAF8F5] dark:bg-[#181716] text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-[#1F1E1D] resize-none"
                   />
                 </div>
 
                 {/* Right: Go Struct Output */}
                 <div className="flex flex-col">
-                  <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center justify-between">
+                  <div className="text-xs font-serif text-[#6B6760] dark:text-[#A8A49C] mb-1.5 flex items-center justify-between">
                     <span>生成 Go Struct 代码</span>
-                    <span className="font-mono text-[11px] text-blue-500">Golang Definition</span>
+                    <span className="font-mono text-[10px] text-[#9E7B5B]">Golang Definition</span>
                   </div>
-                  <pre className="w-full font-mono text-xs p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-900 text-zinc-100 dark:bg-zinc-950 overflow-auto h-[230px] sm:h-[240px]">
+                  <pre className="w-full font-mono text-xs p-3 rounded-xl border border-[#EAE6DF] dark:border-[#38342E] bg-[#1E1E20] text-zinc-100 overflow-auto h-[230px] sm:h-[240px]">
                     <code>{goStructOutput}</code>
                   </pre>
                 </div>
@@ -212,27 +216,27 @@ export default function InteractiveTool() {
             <div className="p-6">
               <div className="max-w-xl mx-auto space-y-6">
                 <div>
-                  <h3 className="text-base font-semibold text-zinc-900 dark:text-white mb-1">
+                  <h3 className="text-base font-serif font-medium text-[#1F1E1D] dark:text-[#EDE9E3] mb-1">
                     高熵加密安全密钥生成器
                   </h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    使用浏览器安全级 Web Crypto API（CSPRN）在本地生成，适合作为 JWT Secret、API Key 或数据库强密码。
+                  <p className="text-xs font-serif text-[#6B6760] dark:text-[#A8A49C]">
+                    使用浏览器安全级 Web Crypto API 在本地生成，适合作为 JWT Secret、API Key 或强密码。
                   </p>
                 </div>
 
                 {/* Token Output Box */}
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-900 text-white font-mono text-xs sm:text-sm overflow-hidden border border-zinc-800">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#FAF8F5] dark:bg-[#181716] text-[#1F1E1D] dark:text-[#EDE9E3] font-mono text-xs sm:text-sm overflow-hidden border border-[#EAE6DF] dark:border-[#38342E]">
                   <span className="truncate flex-1 select-all">{generatedToken}</span>
                   <button
                     onClick={() => handleCopy(generatedToken)}
-                    className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors shrink-0"
+                    className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#948F86] hover:text-[#1F1E1D] dark:hover:text-white transition-colors shrink-0"
                     title="复制到剪贴板"
                   >
-                    {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                    {copied ? <Check className="h-4 w-4 text-[#9E7B5B]" /> : <Copy className="h-4 w-4" />}
                   </button>
                   <button
                     onClick={generateNewToken}
-                    className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors shrink-0"
+                    className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#948F86] hover:text-[#1F1E1D] dark:hover:text-white transition-colors shrink-0"
                     title="重新生成"
                   >
                     <RefreshCw className="h-4 w-4" />
@@ -242,7 +246,7 @@ export default function InteractiveTool() {
                 {/* Controls */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div>
-                    <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1">
+                    <label className="text-xs font-serif text-[#6B6760] dark:text-[#A8A49C] block mb-1">
                       前缀标识 (Prefix):
                     </label>
                     <input
@@ -250,13 +254,13 @@ export default function InteractiveTool() {
                       value={tokenPrefix}
                       onChange={(e) => setTokenPrefix(e.target.value)}
                       placeholder="e.g. dev_sec_, jwt_"
-                      className="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                      className="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-[#EAE6DF] dark:border-[#38342E] bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1">
-                      密钥长度 ({tokenLength} 位随机字符):
+                    <label className="text-xs font-serif text-[#6B6760] dark:text-[#A8A49C] block mb-1">
+                      密钥长度 ({tokenLength} 位字符):
                     </label>
                     <input
                       type="range"
@@ -264,7 +268,7 @@ export default function InteractiveTool() {
                       max={64}
                       value={tokenLength}
                       onChange={(e) => setTokenLength(Number(e.target.value))}
-                      className="w-full accent-blue-600 cursor-pointer"
+                      className="w-full accent-[#1F1E1D] dark:accent-[#EDE9E3] cursor-pointer"
                     />
                   </div>
                 </div>
@@ -272,9 +276,9 @@ export default function InteractiveTool() {
                 <div className="text-center pt-2">
                   <button
                     onClick={generateNewToken}
-                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-lg bg-[#1F1E1D] text-[#FAF8F5] dark:bg-[#EDE9E3] dark:text-[#181716] text-xs font-serif hover:bg-[#33312E] dark:hover:bg-white transition-all shadow-2xs"
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />
+                    <RefreshCw className="h-3.5 w-3.5 opacity-80" />
                     <span>即刻生成新密钥</span>
                   </button>
                 </div>
