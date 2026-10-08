@@ -7,7 +7,6 @@ import ZenLibrary from "@/components/ZenLibrary";
 import QuoteCardStudio from "@/components/QuoteCardStudio";
 import ProjectShowcase from "@/components/ProjectShowcase";
 import InteractiveTool from "@/components/InteractiveTool";
-import PlaybookSection from "@/components/PlaybookSection";
 import AboutAndContact from "@/components/AboutAndContact";
 import Footer from "@/components/Footer";
 import CyberLampIntro from "@/components/CyberLampIntro";
@@ -58,10 +57,7 @@ export default function Home() {
         {/* 5. 在线即时交互开发工具 (DevForge: JSON转Go / Token生成器) */}
         <InteractiveTool />
 
-        {/* 6. 技术深度复盘与洞察专栏 */}
-        <PlaybookSection />
-
-        {/* 7. 关于我与全渠道联系转化 */}
+        {/* 6. 关于我与全渠道联系转化 */}
         <AboutAndContact />
       </main>
 

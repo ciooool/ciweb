@@ -23,10 +23,10 @@ export default function Hero() {
           </div>
 
           {/* 霓虹大标题 */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-mono font-bold text-[#EAF0FF] tracking-tight leading-[1.15] mb-6">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-sans font-extrabold text-[#EAF0FF] tracking-tight leading-[1.12] mb-6">
             以代码构建系统，
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5CF2C4] via-[#A7F3D0] to-[#8B7BFF] drop-shadow-[0_0_25px_rgba(92,242,196,0.4)]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5CF2C4] via-[#A7F3D0] to-[#8B7BFF] drop-shadow-[0_0_35px_rgba(92,242,196,0.45)]">
               以阅读重塑心智。
             </span>
           </h1>
@@ -61,6 +61,7 @@ export default function Hero() {
           <div className="flex flex-wrap items-center gap-4 mb-16">
             <a
               href="#library"
+              data-cursor="LIBRARY"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#5CF2C4] px-6 py-3 text-xs font-mono font-semibold tracking-wider text-[#05070F] hover:bg-[#7DF9D2] hover:shadow-[0_0_25px_rgba(92,242,196,0.5)] transition-all"
             >
               <BookOpen className="h-4 w-4" />
@@ -69,6 +70,7 @@ export default function Hero() {
 
             <a
               href="#projects"
+              data-cursor="WORK"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#1F2A4D] bg-[#0A0E1A] px-6 py-3 text-xs font-mono tracking-wider text-[#EAF0FF] hover:border-[#8B7BFF] hover:text-[#8B7BFF] transition-all"
             >
               <Code2 className="h-4 w-4" />

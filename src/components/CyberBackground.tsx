@@ -2,6 +2,7 @@
 
 import React from "react";
 import StarfieldCanvas from "./StarfieldCanvas";
+import SideTrafficCanvas from "./SideTrafficCanvas";
 
 export default function CyberBackground() {
   return (
@@ -9,8 +10,11 @@ export default function CyberBackground() {
       {/* 1. 星辰微粒粒子画布 */}
       <StarfieldCanvas />
 
-      {/* 2. Omar Fawzy 标志性双色动态流动极光 (Aurora Drift) */}
-      <div className="aurora-container absolute inset-0 overflow-hidden opacity-70">
+      {/* 2. 屏幕两侧边缘流动赛博车流 (Omar Fawzy 同款) */}
+      <SideTrafficCanvas />
+
+      {/* 3. Omar Fawzy 标志性双色动态流动极光 (Aurora Drift) */}
+      <div className="aurora-container absolute inset-0 overflow-hidden opacity-75">
         {/* 左上方紫罗兰极光球 (Violet Aurora) */}
         <div
           className="absolute rounded-full filter blur-[100px] sm:blur-[140px] animate-drift-a"
@@ -53,7 +57,7 @@ export default function CyberBackground() {
         />
       </div>
 
-      {/* 3. 赛博数码细网格底纹 (Cyber Grid Overlay with Radial Vignette) */}
+      {/* 4. 赛博数码细网格底纹 (Cyber Grid Overlay with Radial Vignette) */}
       <div
         className="absolute inset-0 opacity-[0.14]"
         style={{
@@ -67,7 +71,7 @@ export default function CyberBackground() {
         }}
       />
 
-      {/* 4. 底部地平线赛博微光晕 (Bottom Street / Cyber Horizon) */}
+      {/* 5. 底部地平线赛博微光晕 (Bottom Street / Cyber Horizon) */}
       <div
         className="absolute bottom-0 left-0 right-0 h-40 opacity-40 pointer-events-none"
         style={{

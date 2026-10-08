@@ -65,12 +65,6 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
             金句工坊
           </a>
           <a
-            href="#playbook"
-            className="hover:text-[#5CF2C4] transition-colors"
-          >
-            实战复盘
-          </a>
-          <a
             href="#contact"
             className="hover:text-[#5CF2C4] transition-colors"
           >
@@ -174,13 +168,6 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
             className="block text-[#9FB0D0] hover:text-[#5CF2C4]"
           >
             金句工坊
-          </a>
-          <a
-            href="#playbook"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-[#9FB0D0] hover:text-[#5CF2C4]"
-          >
-            实战复盘
           </a>
           <a
             href="#contact"

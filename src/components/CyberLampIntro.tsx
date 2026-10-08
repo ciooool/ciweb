@@ -16,6 +16,8 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
   const [isMuted, setIsMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  const svgRef = useRef<SVGSVGElement>(null);
+
   // 物理坐标系 (SVG 1000x900 空间)
   const anchor = { x: 536, y: 286 }; // 吊灯边缘出绳孔
   const restPos = { x: 536, y: 440 }; // 静止手柄位置
@@ -23,13 +25,13 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
   const [handlePos, setHandlePos] = useState({ x: 536, y: 440 });
   const [curveMid, setCurveMid] = useState({ x: 536, y: 363 });
 
-  // 物理仿真引用
+  // 物理仿真状态
   const posRef = useRef({ x: 536, y: 440 });
   const velRef = useRef({ vx: 0, vy: 0 });
-  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, handleX: 536, handleY: 440 });
   const animFrameRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
   const isLitRef = useRef(false);
+  const dragStartYRef = useRef(440);
 
   useEffect(() => {
     isLitRef.current = isLit;
@@ -39,8 +41,8 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
   const startSpringAnimation = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
 
-    const k = 0.22; // 弹簧劲度
-    const damping = 0.82; // 空气阻尼
+    const k = 0.28; // 弹簧劲度系数
+    const damping = 0.85; // 空气阻尼系数
 
     const step = () => {
       if (isDraggingRef.current) return;
@@ -57,15 +59,14 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
       posRef.current.x += velRef.current.vx;
       posRef.current.y += velRef.current.vy;
 
-      // 计算绳索自然受力弯曲中点 (Bezier Curve Control Point)
-      // 随着手柄横向摆动，绳线产生动态拱形弧度
-      const midX = anchor.x + (posRef.current.x - anchor.x) * 0.45 + velRef.current.vx * 1.5;
+      // 绳索在振荡时的柔性贝塞尔弯曲弧度
+      const midX = anchor.x + (posRef.current.x - anchor.x) * 0.48 + velRef.current.vx * 1.5;
       const midY = anchor.y + (posRef.current.y - anchor.y) * 0.52;
 
       setHandlePos({ x: posRef.current.x, y: posRef.current.y });
       setCurveMid({ x: midX, y: midY });
 
-      // 如果振幅足够微小，平稳停靠在静止位
+      // 当振幅与速度极小时稳定静止
       if (
         Math.abs(dx) < 0.2 &&
         Math.abs(dy) < 0.2 &&
@@ -87,90 +88,97 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
     animFrameRef.current = requestAnimationFrame(step);
   }, []);
 
-  // 触发通电开关切换 (Toggle On / Off)
+  // 触发通电开关双向切换 (Toggle On / Off)
   const toggleLamp = useCallback(() => {
     const nextLit = !isLitRef.current;
     setIsLit(nextLit);
     soundManager.playLampSwitch();
 
     if (nextLit) {
-      // 开灯：电弧多段闪烁起辉
       setFlickerLevel(1.2);
-      setTimeout(() => setFlickerLevel(0.4), 60);
-      setTimeout(() => setFlickerLevel(1.1), 120);
-      setTimeout(() => setFlickerLevel(0.9), 180);
-      setTimeout(() => setFlickerLevel(1.0), 260);
+      setTimeout(() => setFlickerLevel(0.2), 45);
+      setTimeout(() => setFlickerLevel(1.15), 90);
+      setTimeout(() => setFlickerLevel(0.6), 140);
+      setTimeout(() => setFlickerLevel(1.0), 200);
     } else {
-      // 关灯：灯丝余辉迅速熄灭
       setFlickerLevel(0);
     }
   }, []);
 
-  // 鼠标拖拽拉扯事件
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // 将屏幕坐标精准转换为 SVG 内部坐标 (100% 解决不同屏幕比例变形与错位)
+  const getSvgPoint = (clientX: number, clientY: number) => {
+    if (!svgRef.current) return { x: 536, y: 440 };
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svgRef.current.getScreenCTM();
+    if (ctm) {
+      return pt.matrixTransform(ctm.inverse());
+    }
+    return { x: 536, y: 440 };
+  };
+
+  // 纯鼠标拉绳交互 (Pointer Events)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
     isDraggingRef.current = true;
     setIsDragging(true);
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
 
-    dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      handleX: posRef.current.x,
-      handleY: posRef.current.y,
-    };
+    const svgPt = getSvgPoint(e.clientX, e.clientY);
+    dragStartYRef.current = svgPt.y;
 
     soundManager.playCordTension();
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
+    const onPointerMove = (moveEvent: PointerEvent) => {
       if (!isDraggingRef.current) return;
-      const deltaX = moveEvent.clientX - dragStartRef.current.mouseX;
-      const deltaY = moveEvent.clientY - dragStartRef.current.mouseY;
+      const currentSvgPt = getSvgPoint(moveEvent.clientX, moveEvent.clientY);
+      const deltaY = currentSvgPt.y - dragStartYRef.current;
+      const deltaX = currentSvgPt.x - anchor.x;
 
-      // 弹性物理阻尼计算：向下最大拉动 85px，左右可横向摆动 40px
-      const targetY = Math.max(restPos.y - 10, Math.min(restPos.y + 85, restPos.y + deltaY * 0.75));
-      const targetX = Math.max(anchor.x - 40, Math.min(anchor.x + 40, restPos.x + deltaX * 0.6));
+      // 弹性物理阻尼：向下最大拉动 105px，左右侧摆 55px
+      const targetY = Math.max(restPos.y - 12, Math.min(restPos.y + 105, restPos.y + deltaY * 0.85));
+      const targetX = Math.max(anchor.x - 55, Math.min(anchor.x + 55, restPos.x + deltaX * 0.7));
 
       posRef.current.x = targetX;
       posRef.current.y = targetY;
 
-      // 绳索在受拉力与左右偏转时的真实贝塞尔弯曲弧度
-      const curveBow = (targetX - anchor.x) * 0.35;
-      const midX = anchor.x + (targetX - anchor.x) * 0.5 + curveBow;
+      // 自然弓形贝塞尔曲线控制点
+      const bow = (targetX - anchor.x) * 0.45;
+      const midX = anchor.x + (targetX - anchor.x) * 0.5 + bow;
       const midY = anchor.y + (targetY - anchor.y) * 0.52;
 
       setHandlePos({ x: targetX, y: targetY });
       setCurveMid({ x: midX, y: midY });
     };
 
-    const onMouseUp = () => {
+    const onPointerUp = () => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       setIsDragging(false);
 
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
 
       const pullDistance = posRef.current.y - restPos.y;
 
-      // 只要下拉超过 24px，或者点击（拉动极小小于 6px），均视作有效触发开/关！
-      if (pullDistance > 24 || pullDistance < 6) {
+      // 达到阈值 (>= 22px) 或单击轻点 (<= 6px) 触发切换
+      if (pullDistance >= 22 || pullDistance <= 6) {
         toggleLamp();
-        // 赋予松手时向上的高弹回缩初速度，让绳子向上猛跳再晃动
-        velRef.current.vy = -Math.max(16, pullDistance * 0.6);
-        velRef.current.vx = (posRef.current.x - anchor.x) * -0.3;
+        velRef.current.vy = -Math.max(22, pullDistance * 0.8);
+        velRef.current.vx = (posRef.current.x - anchor.x) * -0.4;
       } else {
-        // 轻微拉扯后回弹
-        velRef.current.vy = -pullDistance * 0.4;
+        velRef.current.vy = -pullDistance * 0.5;
       }
 
       startSpringAnimation();
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
   };
 
-  // 进入主页
+  // 进入工坊
   const handleEnterPortfolio = () => {
     try {
       sessionStorage.setItem("ciooool_lamp_intro_done", "true");
@@ -180,7 +188,6 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
     onClose();
   };
 
-  // 组件卸载时清理
   useEffect(() => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -189,15 +196,14 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
 
   if (!isOpen) return null;
 
-  // 沿着贝塞尔曲线动态生成 9 颗圆珠坐标 (Bead distribution along Bezier Curve)
-  const beads = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map((t) => {
-    // 二阶贝塞尔公式: B(t) = (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
+  // 贝塞尔曲线上均匀分布 10 颗高质感圆珠
+  const beads = [0.1, 0.19, 0.28, 0.37, 0.46, 0.55, 0.64, 0.73, 0.82, 0.91].map((t) => {
     const bx = (1 - t) * (1 - t) * anchor.x + 2 * (1 - t) * t * curveMid.x + t * t * handlePos.x;
     const by = (1 - t) * (1 - t) * anchor.y + 2 * (1 - t) * t * curveMid.y + t * t * handlePos.y;
     return { bx, by };
   });
 
-  const pullThresholdReached = handlePos.y - restPos.y > 24;
+  const pullThresholdReached = handlePos.y - restPos.y >= 22;
 
   return (
     <div
@@ -205,8 +211,8 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
       style={{
         backgroundColor: "#05070F",
         background: isLit
-          ? "radial-gradient(ellipse 85% 65% at 50% 25%, #0B192E 0%, #05070F 85%)"
-          : "radial-gradient(ellipse 55% 45% at 50% 20%, #080D1E 0%, #05070F 75%)",
+          ? "radial-gradient(ellipse 95% 75% at 50% 25%, #0A162B 0%, #05070F 85%)"
+          : "radial-gradient(ellipse 65% 55% at 50% 20%, #070B17 0%, #05070F 80%)",
       }}
     >
       {/* 顶部工具栏 */}
@@ -217,7 +223,7 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
             setIsMuted(next);
             soundManager.setMuted(next);
           }}
-          className="p-2.5 rounded-full border border-[#1F2A4D] bg-[#0A0E1A]/80 text-[#8B7BFF] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/50 transition-all backdrop-blur-md"
+          className="p-2.5 rounded-full border border-[#1F2A4D] bg-[#0A0E1A]/80 text-[#9FB0D0] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/60 transition-all backdrop-blur-sm"
           title={isMuted ? "开启音效" : "静音"}
         >
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -225,21 +231,21 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
 
         <button
           onClick={handleEnterPortfolio}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-[#1F2A4D] bg-[#0A0E1A]/80 text-xs font-mono text-[#9FB0D0] hover:text-white hover:border-[#5CF2C4]/50 transition-all backdrop-blur-md"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#1F2A4D] bg-[#0A0E1A]/80 text-[#9FB0D0] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/60 text-xs font-mono transition-all backdrop-blur-sm"
         >
-          <span>Skip</span>
+          <span>进入工坊</span>
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* SVG 舞台主画布 */}
+      {/* SVG 吊灯与拉绳核心画布 */}
       <svg
-        className="w-full h-full max-w-[1200px] max-h-[1000px] absolute inset-0 m-auto pointer-events-none"
+        ref={svgRef}
         viewBox="0 0 1000 900"
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMidYMid meet"
+        className="absolute inset-0 w-full h-full pointer-events-none select-none overflow-visible"
       >
         <defs>
-          {/* 金属与外壳渐变 */}
           <linearGradient id="lampMetal" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#121625" />
             <stop offset="40%" stopColor="#4B5577" />
@@ -249,51 +255,40 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
 
           <linearGradient id="shadeBody" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#080B15" />
-            <stop offset="20%" stopColor="#1B2238" />
-            <stop offset="45%" stopColor="#323E5E" />
-            <stop offset="70%" stopColor="#171F36" />
+            <stop offset="25%" stopColor="#1B2238" />
+            <stop offset="45%" stopColor="#36415F" />
+            <stop offset="75%" stopColor="#121729" />
             <stop offset="100%" stopColor="#070910" />
           </linearGradient>
 
-          <linearGradient id="handleBody" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#151A2B" />
-            <stop offset="38%" stopColor="#4D5879" />
-            <stop offset="55%" stopColor="#2D3550" />
-            <stop offset="100%" stopColor="#0E121E" />
-          </linearGradient>
-
-          {/* 点亮时的霓虹高斯光晕 */}
-          <radialGradient id="lampBloom" cx="50%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#5CF2C4" stopOpacity={0.4 * flickerLevel} />
-            <stop offset="40%" stopColor="#5CF2C4" stopOpacity={0.15 * flickerLevel} />
-            <stop offset="75%" stopColor="#8B7BFF" stopOpacity={0.07 * flickerLevel} />
+          <radialGradient id="lampBloom" cx="50%" cy="35%" r="70%">
+            <stop offset="0%" stopColor="#5CF2C4" stopOpacity={0.28 * flickerLevel} />
+            <stop offset="40%" stopColor="#5CF2C4" stopOpacity={0.08 * flickerLevel} />
+            <stop offset="75%" stopColor="#8B7BFF" stopOpacity={0.04 * flickerLevel} />
             <stop offset="100%" stopColor="#8B7BFF" stopOpacity="0" />
           </radialGradient>
 
-          {/* 外层大光锥 */}
-          <linearGradient id="beamGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#CFFFF0" stopOpacity={0.35 * flickerLevel} />
-            <stop offset="30%" stopColor="#5CF2C4" stopOpacity={0.16 * flickerLevel} />
-            <stop offset="75%" stopColor="#8B7BFF" stopOpacity={0.06 * flickerLevel} />
+          <linearGradient id="beamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#CFFFF0" stopOpacity={0.3 * flickerLevel} />
+            <stop offset="35%" stopColor="#5CF2C4" stopOpacity={0.12 * flickerLevel} />
+            <stop offset="75%" stopColor="#8B7BFF" stopOpacity={0.04 * flickerLevel} />
             <stop offset="100%" stopColor="#8B7BFF" stopOpacity="0" />
           </linearGradient>
 
-          {/* 内层高亮核心光锥 */}
-          <linearGradient id="beamCoreGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.5 * flickerLevel} />
-            <stop offset="35%" stopColor="#BFF9E7" stopOpacity={0.18 * flickerLevel} />
+          <linearGradient id="beamCoreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.28 * flickerLevel} />
+            <stop offset="40%" stopColor="#BFF9E7" stopOpacity={0.08 * flickerLevel} />
             <stop offset="100%" stopColor="#BFF9E7" stopOpacity="0" />
           </linearGradient>
 
-          {/* 地面光斑 */}
           <radialGradient id="poolGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#A8F7DF" stopOpacity={0.4 * flickerLevel} />
-            <stop offset="55%" stopColor="#5CF2C4" stopOpacity={0.14 * flickerLevel} />
+            <stop offset="0%" stopColor="#A8F7DF" stopOpacity={0.35 * flickerLevel} />
+            <stop offset="60%" stopColor="#5CF2C4" stopOpacity={0.09 * flickerLevel} />
             <stop offset="100%" stopColor="#5CF2C4" stopOpacity="0" />
           </radialGradient>
 
           <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feGaussianBlur stdDeviation="3.2" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -301,34 +296,30 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
           </filter>
 
           <filter id="beamSoft" x="-30%" y="-10%" width="160%" height="120%">
-            <feGaussianBlur stdDeviation="16" />
+            <feGaussianBlur stdDeviation="14" />
           </filter>
         </defs>
 
         {/* 光束与地面光池 (只有 isLit 为 true 时渲染) */}
         {isLit && (
           <g className="transition-opacity duration-300">
-            {/* 顶端全向辉光 */}
             <circle cx="500" cy="310" r="420" fill="url(#lampBloom)" />
 
-            {/* 外层大光束 */}
             <path
               d="M 500 290 L 100 900 L 900 900 Z"
               fill="url(#beamGrad)"
               filter="url(#beamSoft)"
             />
 
-            {/* 内层核心聚光束 */}
             <path
               d="M 500 290 L 280 900 L 720 900 Z"
               fill="url(#beamCoreGrad)"
               filter="url(#beamSoft)"
             />
 
-            {/* 地面椭圆光斑 */}
             <ellipse cx="500" cy="850" rx="420" ry="55" fill="url(#poolGrad)" />
 
-            {/* 浮尘光粒 */}
+            {/* 浮尘漂浮光粒 */}
             <g className="opacity-75">
               {[
                 { cx: 480, cy: 400, r: 2.2, dur: "3s" },
@@ -384,7 +375,7 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
             <ellipse cx="500" cy="286" rx="104" ry="13" fill="#5CF2C4" fillOpacity="0.25" filter="url(#softGlow)" />
           )}
 
-          {/* 灯泡与灯丝 */}
+          {/* 灯泡 */}
           <circle
             cx="500"
             cy="296"
@@ -417,8 +408,20 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
           )}
         </g>
 
-        {/* 物理可弯曲弹簧拉绳链条 (Pull Chain with Bezier Curvature) */}
-        <g id="pullChain">
+        {/* 物理可弯曲弹簧拉绳链条 (全域感应热区，支持点击拉绳任意位置拉动) */}
+        <g
+          id="pullChain"
+          className="cursor-grab active:cursor-grabbing pointer-events-auto"
+          onPointerDown={handlePointerDown}
+        >
+          {/* 超宽隐形热区路径 */}
+          <path
+            d={`M ${anchor.x} ${anchor.y} Q ${curveMid.x} ${curveMid.y} ${handlePos.x} ${handlePos.y}`}
+            fill="none"
+            stroke="transparent"
+            strokeWidth="48"
+          />
+
           {/* 弯曲金属线 */}
           <path
             d={`M ${anchor.x} ${anchor.y} Q ${curveMid.x} ${curveMid.y} ${handlePos.x} ${handlePos.y}`}
@@ -442,101 +445,138 @@ export default function CyberLampIntro({ isOpen, onClose }: CyberLampIntroProps)
 
           {/* 金属拉绳手柄 */}
           <g transform={`translate(${handlePos.x}, ${handlePos.y})`}>
+            {/* 宽大隐形感应热区 */}
+            <circle cx="0" cy="18" r="44" fill="transparent" />
+
             <rect x="-3.5" y="-2" width="7" height="5" rx="1.5" fill="#8D96B3" />
             <rect
               x="-8.5"
               y="3"
               width="17"
-              height="32"
+              height="30"
               rx="8.5"
-              fill="url(#handleBody)"
-              stroke={pullThresholdReached ? "#5CF2C4" : isLit ? "#5CF2C4" : "#8B7BFF"}
-              strokeWidth="1.8"
-              filter={pullThresholdReached || isLit ? "url(#softGlow)" : undefined}
+              fill="url(#lampMetal)"
+              stroke={isDragging ? "#5CF2C4" : "#8B7BFF"}
+              strokeWidth="1.2"
+              strokeOpacity={isDragging ? "0.9" : "0.5"}
             />
-            {/* 呼吸发光装饰槽 */}
             <rect
-              x="-8.5"
-              y="22"
-              width="17"
-              height="4.5"
+              x="-8"
+              y="23"
+              width="16"
+              height="3.5"
               fill={isLit ? "#5CF2C4" : "#8B7BFF"}
-              className="animate-pulse"
+              opacity={isDragging ? "0.9" : "0.4"}
               filter="url(#softGlow)"
             />
             <ellipse cx="-3" cy="13" rx="1.5" ry="6" fill="#FFFFFF" opacity="0.35" />
+
+            {/* 拖动时的微光指示圈 */}
+            {isDragging && (
+              <circle
+                cx="0"
+                cy="18"
+                r="32"
+                fill="none"
+                stroke="#5CF2C4"
+                strokeWidth="1.5"
+                strokeDasharray="4 4"
+                className="animate-spin"
+              />
+            )}
+          </g>
+
+          {/* 手柄右侧悬浮状态提示徽标 */}
+          <g
+            transform={`translate(${handlePos.x + 36}, ${handlePos.y + 12})`}
+            className="pointer-events-none select-none"
+          >
+            {isDragging ? (
+              <g>
+                <rect
+                  x="-8"
+                  y="-14"
+                  width={pullThresholdReached ? 170 : 140}
+                  height="26"
+                  rx="13"
+                  fill="#0A0E1A"
+                  fillOpacity="0.9"
+                  stroke={pullThresholdReached ? "#5CF2C4" : "#8B7BFF"}
+                  strokeWidth="1.2"
+                />
+                <text
+                  x="8"
+                  y="4"
+                  fill={pullThresholdReached ? "#5CF2C4" : "#8B7BFF"}
+                  fontSize="10"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                  letterSpacing="0.08em"
+                >
+                  {pullThresholdReached
+                    ? isLit
+                      ? "RELEASE TO TURN OFF 🌙"
+                      : "RELEASE TO TURN ON ⚡"
+                    : "KEEP PULLING DOWN..."}
+                </text>
+              </g>
+            ) : (
+              <g className="animate-bounce" style={{ animationDuration: "2s" }}>
+                <rect
+                  x="-8"
+                  y="-14"
+                  width="110"
+                  height="26"
+                  rx="13"
+                  fill="#0A0E1A"
+                  fillOpacity="0.85"
+                  stroke="#1F2A4D"
+                  strokeWidth="1"
+                />
+                <text
+                  x="6"
+                  y="4"
+                  fill="#5CF2C4"
+                  fontSize="10"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                  letterSpacing="0.1em"
+                >
+                  {isLit ? "PULL TO OFF ↓" : "PULL TO ON ↓"}
+                </text>
+              </g>
+            )}
           </g>
         </g>
       </svg>
 
-      {/* 纯鼠标交互抓取手柄层 (Mouse Drag Hitbox) */}
-      <div
-        className="absolute z-30 cursor-grab active:cursor-grabbing flex flex-col items-center pointer-events-auto"
-        style={{
-          left: `${(handlePos.x / 1000) * 100}%`,
-          top: `${(handlePos.y / 900) * 100}%`,
-          transform: "translate(-50%, -15px)",
-        }}
-        onMouseDown={handleMouseDown}
-      >
-        {/* 宽大受力触控热区 */}
-        <div className="w-24 h-24 flex items-center justify-center">
-          <div
-            className={`w-10 h-16 rounded-full border border-dashed transition-all duration-150 ${
-              isDragging
-                ? "border-[#5CF2C4] bg-[#5CF2C4]/25 scale-110 shadow-[0_0_20px_rgba(92,242,196,0.6)]"
-                : "border-[#8B7BFF]/40 hover:border-[#5CF2C4] hover:bg-[#5CF2C4]/15"
-            }`}
-          />
-        </div>
-
-        {/* 动态拉力状态徽标 */}
-        <div className="flex flex-col items-center mt-1 pointer-events-none transition-all">
-          <span
-            className={`text-[10px] font-mono tracking-widest uppercase px-3 py-1 rounded-full border transition-all ${
-              pullThresholdReached
-                ? "border-[#5CF2C4] text-[#5CF2C4] bg-[#5CF2C4]/25 scale-105 shadow-[0_0_15px_rgba(92,242,196,0.5)]"
-                : "border-[#1F2A4D] text-[#8B7BFF] bg-[#0A0E1A]/90"
-            }`}
-          >
-            {isDragging
-              ? pullThresholdReached
-                ? isLit
-                  ? "RELEASE TO TURN OFF 🌙"
-                  : "RELEASE TO TURN ON ⚡"
-                : "KEEP PULLING DOWN..."
-              : isLit
-              ? "PULL TO TURN OFF"
-              : "PULL TO TURN ON"}
-          </span>
-          <span className="text-[10px] font-mono text-[#7D88AA] mt-1 opacity-75">
-            {isDragging ? "松开鼠标切换" : "按住鼠标下拉 / 单击拉绳"}
-          </span>
-        </div>
-      </div>
-
-      {/* 底部进入工坊与状态引导 (点亮后呈现) */}
-      <div className="absolute bottom-10 left-0 right-0 z-20 flex flex-col items-center justify-center text-center px-4">
+      {/* 底部引导文案与状态展示 */}
+      <div className="absolute bottom-10 left-0 right-0 z-20 flex flex-col items-center justify-center text-center px-4 pointer-events-auto">
         {isLit ? (
           <div className="flex flex-col items-center animate-fade-in">
-            <p className="text-xs sm:text-sm font-mono text-[#5CF2C4] tracking-wider mb-3 drop-shadow-[0_0_10px_rgba(92,242,196,0.5)]">
-              ATELIER ILLUMINATED · 工坊已点亮
+            <p className="text-xs font-mono text-[#5CF2C4] tracking-widest mb-3 uppercase">
+              ✦ Atelier Illuminated · 工坊已点亮 ✦
             </p>
-            <button
-              onClick={handleEnterPortfolio}
-              className="group flex items-center gap-2.5 px-7 py-3 rounded-xl bg-[#5CF2C4] text-[#05070F] font-mono text-xs font-bold tracking-wider hover:bg-[#7DF9D2] hover:shadow-[0_0_30px_rgba(92,242,196,0.6)] hover:scale-105 transition-all shadow-lg"
-            >
-              <span>步入 Ciooool Atelier 工坊</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleEnterPortfolio}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#5CF2C4] text-[#05070F] font-mono text-xs font-bold tracking-wider hover:bg-[#7DF9D2] hover:shadow-[0_0_25px_rgba(92,242,196,0.5)] transition-all"
+              >
+                <span>步入工坊</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <p className="text-[11px] font-mono text-[#7D88AA] mt-2">
+              可继续下拉拉绳关灯，或点击上方进入
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <h2 className="text-xl sm:text-2xl font-mono text-[#EAF0FF] tracking-wider mb-1.5">
+            <h2 className="text-xl sm:text-2xl font-mono text-[#EAF0FF] tracking-wider mb-1.5 font-bold">
               CIOOOUL ATELIER
             </h2>
-            <p className="text-xs sm:text-sm font-mono text-[#7D88AA]">
-              全屏暗室沉浸模式 · 用鼠标拉动链绳开灯
+            <p className="text-xs font-mono text-[#7D88AA]">
+              按住鼠标下拉拉绳开灯 · 松手点亮
             </p>
           </div>
         )}
