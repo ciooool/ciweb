@@ -11,7 +11,7 @@ import PlaybookSection from "@/components/PlaybookSection";
 import AboutAndContact from "@/components/AboutAndContact";
 import Footer from "@/components/Footer";
 import CyberLampIntro from "@/components/CyberLampIntro";
-import StarfieldCanvas from "@/components/StarfieldCanvas";
+import CyberBackground from "@/components/CyberBackground";
 
 export default function Home() {
   // 默认开启，保证首屏直接渲染沉浸式暗室吊灯，避免白屏闪烁
@@ -30,8 +30,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative bg-[#05070F] text-[#EAF0FF]">
-      {/* 赛博朋克深空粒子星辰背景 */}
-      <StarfieldCanvas />
+      {/* 赛博朋克深空背景：流动双色极光 + 星辰画布 + 微光网格 (Omar Fawzy 风格) */}
+      <CyberBackground />
 
       {/* 可拖拽物理拉绳吊灯开场动画 (Omar Fawzy 风格) */}
       <CyberLampIntro

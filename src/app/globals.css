@@ -77,6 +77,33 @@ body {
   box-shadow: 0 8px 30px -4px rgba(92, 242, 196, 0.15);
 }
 
+/* 极光漂移自然关键帧动画 (Replicating Omar Fawzy Aurora) */
+@keyframes drift-a {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(5vw, 4vw) scale(1.12);
+  }
+}
+
+@keyframes drift-b {
+  0%, 100% {
+    transform: translate(0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate(-5vw, -3vw) scale(0.95);
+  }
+}
+
+.animate-drift-a {
+  animation: drift-a 28s ease-in-out infinite;
+}
+
+.animate-drift-b {
+  animation: drift-b 34s ease-in-out infinite;
+}
+
 /* 优雅平滑滚动条 */
 ::-webkit-scrollbar {
   width: 6px;
