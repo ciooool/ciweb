@@ -6,7 +6,6 @@ import Hero from '@/components/Hero';
 import AboutSection from '@/components/AboutSection';
 import ProjectsSection from '@/components/ProjectsSection';
 import BookshelfSection from '@/components/BookshelfSection';
-import { InteractiveLab } from '@/components/InteractiveLab';
 import { ContactSection } from '@/components/ContactSection';
 import Footer from '@/components/Footer';
 import LampPullRig from '@/components/LampPullRig';
@@ -60,10 +59,10 @@ export default function Home() {
         />
       )}
 
-      {/* 4. 悬浮极简顶栏 (昼夜切换 / 物理拉灯 / 音效开关 / 快速导航) */}
+      {/* 4. 悬浮极简顶栏 (昼夜切换 / 物理拉灯 / 音效开关 / 快捷工具 ⌘K / 快速导航) */}
       <Navbar onOpenLamp={() => setLampOpen(true)} />
 
-      {/* 4. 核心内容板块 */}
+      {/* 5. 核心内容板块 (已精简移除案头工具占位，页面更为纯粹克制) */}
       <main className="flex-1 relative z-10">
         {/* 01. 首屏价值宣言与工程账本 */}
         <Hero />
@@ -77,20 +76,17 @@ export default function Home() {
         {/* 04. 殿堂级精选著作认知书房 (腾讯官方微信读书 200 OK 直达) */}
         <BookshelfSection />
 
-        {/* 05. 案头工程微工具 (JSON转Go / 高熵Token生成) */}
-        <InteractiveLab />
-
-        {/* 06. 见字如面全渠道联络 */}
+        {/* 05. 见字如面全渠道联络 */}
         <ContactSection />
 
-        {/* 07. 底部横向赛博都市天际线与穿梭车流 */}
+        {/* 06. 底部横向赛博都市天际线与穿梭车流 */}
         <StreetCanvas />
       </main>
 
-      {/* 5. 隐藏式快捷工具组件 (唤醒展开抽屉面板，对标 123.haiwell.com) */}
+      {/* 6. 隐藏式快捷工具组件 (支持 ⌘K 全局唤醒与顶栏直达，对标 123.haiwell.com) */}
       {isClient && <QuickToolsDrawer isCurtainClosed={lampOpen} />}
 
-      {/* 6. 极简页脚 */}
+      {/* 7. 极简页脚 */}
       <Footer />
     </div>
   );

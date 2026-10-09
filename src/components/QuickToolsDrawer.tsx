@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   X,
   ChevronRight,
@@ -9,16 +9,7 @@ import {
   Check,
   RotateCcw,
   Sparkles,
-  Clock,
-  Code2,
-  FileText,
-  KeyRound,
-  ShieldCheck,
-  Globe,
-  Fingerprint,
-  ArrowLeftRight,
-  Sliders,
-  CheckCircle2,
+  Search,
   AlertCircle,
 } from 'lucide-react';
 import { soundManager } from '@/utils/audio';
@@ -77,6 +68,20 @@ const TOOLS_LIST: ToolItem[] = [
     icon: '{}',
   },
   {
+    id: 'json-to-go',
+    name: 'JSON 转 Go Struct',
+    desc: '将 JSON 实时逆向为严谨的 Go 结构体定义。',
+    category: '数据',
+    icon: 'Go',
+  },
+  {
+    id: 'token-gen',
+    name: '高熵 Token 生成器',
+    desc: 'API Key / Base62 / 密码学安全随机令牌。',
+    category: '安全',
+    icon: '⚿',
+  },
+  {
     id: 'url-codec',
     name: 'URL 编码工具',
     desc: '让 URL 传递得更准确。',
@@ -99,6 +104,114 @@ const TOOLS_LIST: ToolItem[] = [
   },
 ];
 
+/* =========================================================================
+   核心算法 1: JSON to Go Struct
+   ========================================================================= */
+function jsonToGo(jsonStr: string, rootName = 'Payload'): { code: string; error?: string } {
+  try {
+    const parsed = JSON.parse(jsonStr);
+
+    function toPascalCase(str: string): string {
+      return str
+        .replace(/[-_](\w)/g, (_, c) => c.toUpperCase())
+        .replace(/^\w/, (c) => c.toUpperCase());
+    }
+
+    const structs: string[] = [];
+
+    function parseObject(obj: any, name: string): string {
+      if (obj === null) return 'any';
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return '[]any';
+        const elemType = parseObject(obj[0], `${name}Item`);
+        return `[]${elemType}`;
+      }
+      if (typeof obj === 'object') {
+        const typeName = toPascalCase(name);
+        const fields: string[] = [];
+
+        for (const [key, val] of Object.entries(obj)) {
+          const fieldName = toPascalCase(key);
+          let fieldType = 'any';
+
+          if (val === null) {
+            fieldType = 'any';
+          } else if (typeof val === 'string') {
+            fieldType = 'string';
+          } else if (typeof val === 'number') {
+            fieldType = Number.isInteger(val) ? 'int64' : 'float64';
+          } else if (typeof val === 'boolean') {
+            fieldType = 'bool';
+          } else if (Array.isArray(val)) {
+            if (val.length === 0) {
+              fieldType = '[]any';
+            } else if (typeof val[0] === 'object' && val[0] !== null) {
+              fieldType = `[]${toPascalCase(key)}Item`;
+              parseObject(val[0], `${key}Item`);
+            } else {
+              fieldType = `[]${typeof val[0]}`;
+            }
+          } else if (typeof val === 'object') {
+            fieldType = toPascalCase(key);
+            parseObject(val, key);
+          }
+
+          fields.push(`\t${fieldName} ${fieldType} \`json:"${key}"\``);
+        }
+
+        const structDef = `type ${typeName} struct {\n${fields.join('\n')}\n}`;
+        if (!structs.some((s) => s.startsWith(`type ${typeName} struct`))) {
+          structs.push(structDef);
+        }
+        return typeName;
+      }
+      return typeof obj;
+    }
+
+    parseObject(parsed, rootName);
+    return { code: structs.reverse().join('\n\n') };
+  } catch (err: any) {
+    return { code: '', error: err.message || '无效的 JSON 格式' };
+  }
+}
+
+/* =========================================================================
+   核心算法 2: 高熵密码学安全 Token 生成
+   ========================================================================= */
+function generateSecureToken(format: 'base62' | 'hex' | 'uuid' | 'base64url', length: number, prefix: string): string {
+  if (format === 'uuid') {
+    const u = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+    return prefix ? `${prefix}_${u}` : u;
+  }
+
+  const charSets = {
+    base62: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+    hex: '0123456789abcdef',
+    base64url: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',
+  };
+
+  const chars = charSets[format];
+  const array = new Uint8Array(length);
+  if (typeof window !== 'undefined' && window.crypto) {
+    window.crypto.getRandomValues(array);
+  } else {
+    for (let i = 0; i < length; i++) array[i] = Math.floor(Math.random() * 256);
+  }
+
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars[array[i] % chars.length];
+  }
+
+  return prefix ? `${prefix}_${result}` : result;
+}
+
 interface QuickToolsDrawerProps {
   isCurtainClosed?: boolean;
 }
@@ -107,8 +220,17 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
   const [isOpen, setIsOpen] = useState(false);
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMac, setIsMac] = useState(true);
 
   const drawerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+      setIsMac(/(Mac|iPhone|iPod|iPad)/i.test(navigator.platform || navigator.userAgent));
+    }
+  }, []);
 
   const copyToClipboard = useCallback((text: string, key = 'default') => {
     if (!text) return;
@@ -120,15 +242,15 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
     }, 1800);
   }, []);
 
-  const handleOpen = () => {
+  const handleOpen = useCallback(() => {
     setIsOpen(true);
     soundManager.playClick();
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsOpen(false);
     soundManager.playClick();
-  };
+  }, []);
 
   const handleSelectTool = (id: string) => {
     setActiveToolId(id);
@@ -140,9 +262,21 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
     soundManager.playClick();
   };
 
-  // 监听 ESC 按键关闭抽屉
+  // 全局唤醒快捷键监听: ⌘K / Ctrl+K 以及 ESC
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 快捷键: Cmd+K (Mac) 或 Ctrl+K (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsOpen((prev) => {
+          const next = !prev;
+          soundManager.playClick();
+          return next;
+        });
+        return;
+      }
+
+      // ESC 键收起处理
       if (e.key === 'Escape' && isOpen) {
         if (activeToolId) {
           setActiveToolId(null);
@@ -151,11 +285,22 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
         }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, activeToolId]);
 
-  // 点击外部收起抽屉
+  // 全局事件监听: 支持从导航栏触发唤醒
+  useEffect(() => {
+    const handleOpenEvent = () => {
+      setIsOpen(true);
+      soundManager.playClick();
+    };
+    window.addEventListener('open-quick-tools', handleOpenEvent);
+    return () => window.removeEventListener('open-quick-tools', handleOpenEvent);
+  }, []);
+
+  // 点击外部遮罩收起抽屉
   useEffect(() => {
     const handlePointerDown = (e: MouseEvent) => {
       if (isOpen && drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
@@ -168,11 +313,35 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [isOpen]);
 
+  // 打开抽屉后自动聚焦搜索框
+  useEffect(() => {
+    if (isOpen && !activeToolId) {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, activeToolId]);
+
   const activeTool = TOOLS_LIST.find((t) => t.id === activeToolId);
+
+  // 搜索过滤工具列表
+  const filteredTools = useMemo(() => {
+    if (!searchQuery.trim()) return TOOLS_LIST;
+    const q = searchQuery.toLowerCase().trim();
+    return TOOLS_LIST.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.desc.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q) ||
+        t.id.toLowerCase().includes(q) ||
+        t.icon.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
 
   return (
     <>
-      {/* 1. 默认状态下的极简唤醒触发器 (仅在未闭幕且面板收起时显示，极致轻量克制) */}
+      {/* 1. 默认状态下的极简唤醒触发器 (带 ⌘K 快捷键徽标，极致克制) */}
       {!isCurtainClosed && (
         <div
           className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 transition-all duration-300 ${
@@ -182,10 +351,13 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
           <button
             onClick={handleOpen}
             className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0A0E1A]/90 hover:bg-[#121A2C] border border-[#1E2B46] hover:border-[#5CF2C4]/50 text-xs font-mono text-[#8C9EB8] hover:text-[#5CF2C4] shadow-2xl backdrop-blur-md transition-all duration-200 cursor-pointer group hover:shadow-[0_0_20px_rgba(92,242,196,0.15)]"
-            title="打开快捷工具"
+            title={`打开快捷工具 (${isMac ? '⌘K' : 'Ctrl+K'})`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#5CF2C4] animate-pulse" />
             <span className="font-semibold tracking-wide">快捷工具</span>
+            <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono rounded bg-[#162035] border border-[#233352] text-[#7A8DA6] group-hover:text-[#5CF2C4] transition-colors ml-0.5">
+              {isMac ? '⌘ K' : 'Ctrl K'}
+            </kbd>
           </button>
         </div>
       )}
@@ -205,7 +377,7 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
       {/* 3. 展开抽屉面板容器 (平滑淡入展开、淡出收起，完美对标 123.haiwell.com) */}
       <div
         ref={drawerRef}
-        className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 w-[calc(100vw-2rem)] sm:w-[410px] max-h-[85vh] flex flex-col rounded-2xl bg-[#090D18]/95 border border-[#1C273E] shadow-[0_12px_48px_rgba(0,0,0,0.7)] backdrop-blur-xl overflow-hidden select-none"
+        className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 w-[calc(100vw-2rem)] sm:w-[420px] max-h-[85vh] flex flex-col rounded-2xl bg-[#090D18]/95 border border-[#1C273E] shadow-[0_12px_48px_rgba(0,0,0,0.7)] backdrop-blur-xl overflow-hidden select-none"
         style={{
           opacity: isOpen ? 1 : 0,
           transform: isOpen ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.96)',
@@ -231,7 +403,7 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
 
             <div>
               <p className="text-[10px] font-mono tracking-widest text-[#5C6D89] uppercase font-semibold">
-                {activeTool ? '当前功能' : 'TOOLS'}
+                {activeTool ? '当前功能' : 'COMMAND & TOOLS'}
               </p>
               <h3 className="text-base font-bold text-[#EAF0FF] font-sans">
                 {activeTool ? activeTool.name : '快捷工具'}
@@ -239,58 +411,101 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
             </div>
           </div>
 
-          <button
-            onClick={handleClose}
-            className="w-8 h-8 rounded-full bg-[#121A2C] border border-[#1E2B46] text-[#7C8DA6] hover:text-[#EAF0FF] hover:bg-[#1A253D] flex items-center justify-center transition-all cursor-pointer"
-            title="关闭工具面板 (ESC)"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!activeTool && (
+              <kbd className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono rounded bg-[#131B2D] border border-[#202D45] text-[#6C7E99]">
+                {isMac ? '⌘ K' : 'Ctrl K'}
+              </kbd>
+            )}
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 rounded-full bg-[#121A2C] border border-[#1E2B46] text-[#7C8DA6] hover:text-[#EAF0FF] hover:bg-[#1A253D] flex items-center justify-center transition-all cursor-pointer"
+              title="关闭工具面板 (ESC)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
+        {/* 抽屉顶部搜索条 (列表态呈现，对标全局搜索 Command Palette 体验) */}
+        {!activeTool && (
+          <div className="px-4 pt-3 pb-2 bg-[#0A0E1B]/70 border-b border-[#141C2E]">
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 absolute left-3 text-[#5C6D89] pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索工具 (如: Go, Token, 正则, JSON, 时间)..."
+                className="w-full pl-8 pr-8 py-1.5 text-xs font-mono rounded-xl bg-[#070B14] border border-[#1B273F] text-[#E2EAF8] placeholder-[#5C6D89] focus:outline-none focus:border-[#5CF2C4] transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 p-1 text-[#5C6D89] hover:text-[#E2EAF8] text-xs cursor-pointer"
+                  title="清空搜索"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 副标题引导 */}
-        <div className="px-5 py-2.5 bg-[#080B14]/40 border-b border-[#141C2E]">
+        <div className="px-5 py-2 bg-[#080B14]/40 border-b border-[#141C2E]">
           <p className="text-xs text-[#7B8BA3]">
-            {activeTool ? activeTool.desc : '选一个工具，马上开始。'}
+            {activeTool
+              ? activeTool.desc
+              : searchQuery
+              ? `共找到 ${filteredTools.length} 个相关工具`
+              : '选一个工具，马上开始。'}
           </p>
         </div>
 
         {/* 内容主体区域 (列表态 vs 工具交互态) */}
-        <div className="flex-1 overflow-y-auto max-h-[calc(85vh-115px)] p-4 space-y-2.5 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto max-h-[calc(85vh-130px)] p-4 space-y-2 custom-scrollbar">
           {!activeTool ? (
-            /* --- [A] 工具列表 (严格对应 123.haiwell.com，红框两项已剔除) --- */
-            TOOLS_LIST.map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => handleSelectTool(tool.id)}
-                className="w-full text-left p-3 rounded-xl border border-[#152033] bg-[#0E1524]/60 hover:bg-[#131D30] hover:border-[#5CF2C4]/40 transition-all duration-200 flex items-center justify-between group cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  {/* 左侧圆形图标徽标 */}
-                  <div className="w-10 h-10 rounded-xl bg-[#162035] border border-[#21304D] flex items-center justify-center text-xs font-mono font-bold text-[#8FB5E8] group-hover:text-[#5CF2C4] group-hover:border-[#5CF2C4]/40 transition-colors shrink-0">
-                    {tool.icon}
+            /* --- [A] 工具列表 (原案头工具 + 123.haiwell.com，共 11 款实用微工具) --- */
+            filteredTools.length === 0 ? (
+              <div className="text-center py-10 text-xs font-mono text-[#5C6D89]">
+                未找到匹配的工具
+              </div>
+            ) : (
+              filteredTools.map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => handleSelectTool(tool.id)}
+                  className="w-full text-left p-2.5 rounded-xl border border-[#152033] bg-[#0E1524]/60 hover:bg-[#131D30] hover:border-[#5CF2C4]/40 transition-all duration-200 flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* 左侧圆形图标徽标 */}
+                    <div className="w-9 h-9 rounded-xl bg-[#162035] border border-[#21304D] flex items-center justify-center text-xs font-mono font-bold text-[#8FB5E8] group-hover:text-[#5CF2C4] group-hover:border-[#5CF2C4]/40 transition-colors shrink-0">
+                      {tool.icon}
+                    </div>
+
+                    {/* 标题与描述 */}
+                    <div className="min-w-0 pr-2">
+                      <h4 className="text-sm font-semibold text-[#E2EAF8] group-hover:text-white transition-colors truncate">
+                        {tool.name}
+                      </h4>
+                      <p className="text-[11px] text-[#6F7F98] truncate mt-0.5">
+                        {tool.desc}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* 标题与描述 */}
-                  <div className="min-w-0 pr-2">
-                    <h4 className="text-sm font-semibold text-[#E2EAF8] group-hover:text-white transition-colors truncate">
-                      {tool.name}
-                    </h4>
-                    <p className="text-xs text-[#6F7F98] truncate mt-0.5">
-                      {tool.desc}
-                    </p>
+                  {/* 右侧标签与箭头 */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-[#162035] text-[#7A8CA6] border border-[#202E48]">
+                      {tool.category}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-[#4A5A74] group-hover:text-[#5CF2C4] group-hover:translate-x-0.5 transition-all" />
                   </div>
-                </div>
-
-                {/* 右侧标签与箭头 */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-[#162035] text-[#7A8CA6] border border-[#202E48]">
-                    {tool.category}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-[#4A5A74] group-hover:text-[#5CF2C4] group-hover:translate-x-0.5 transition-all" />
-                </div>
-              </button>
-            ))
+                </button>
+              ))
+            )
           ) : (
             /* --- [B] 具体工具交互面板 --- */
             <div className="py-1">
@@ -311,6 +526,12 @@ export default function QuickToolsDrawer({ isCurtainClosed = false }: QuickTools
               )}
               {activeTool.id === 'json-tools' && (
                 <JsonTools onCopy={copyToClipboard} copiedKey={copiedKey} />
+              )}
+              {activeTool.id === 'json-to-go' && (
+                <JsonToGoTool onCopy={copyToClipboard} copiedKey={copiedKey} />
+              )}
+              {activeTool.id === 'token-gen' && (
+                <TokenGenTool onCopy={copyToClipboard} copiedKey={copiedKey} />
               )}
               {activeTool.id === 'url-codec' && (
                 <UrlCodecTool onCopy={copyToClipboard} copiedKey={copiedKey} />
@@ -350,53 +571,48 @@ function StringFormatTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: 
   const handleSnake = () =>
     setInput((s) =>
       s
-        .replace(/([a-z])([A-Z])/g, '$1_$2')
+        .replace(/([A-Z])/g, '_$1')
+        .toLowerCase()
+        .replace(/^_/, '')
         .replace(/[-\s]+/g, '_')
-        .toLowerCase()
     );
-  const handleKebab = () =>
-    setInput((s) =>
-      s
-        .replace(/([a-z])([A-Z])/g, '$1-$2')
-        .replace(/[_\s]+/g, '-')
-        .toLowerCase()
-    );
-  const handleTrim = () =>
-    setInput((s) => s.split('\n').map((l) => l.trim()).filter(Boolean).join('\n'));
+  const handleTrim = () => setInput((s) => s.replace(/\s+/g, ' ').trim());
 
   return (
-    <div className="space-y-3.5">
-      <div className="relative">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="在此输入或粘贴需要转换的文本..."
-          className="w-full h-32 p-3 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
-        />
-        <div className="flex items-center justify-between text-[11px] font-mono text-[#6A7B95] px-1 mt-1">
-          <span>字符数: {input.length} · 行数: {input ? input.split('\n').length : 0}</span>
-          <button
-            onClick={() => onCopy(input, 'str-copy')}
-            disabled={!input}
-            className="flex items-center gap-1 text-[#5CF2C4] hover:underline disabled:opacity-30 cursor-pointer"
-          >
-            {copiedKey === 'str-copy' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            {copiedKey === 'str-copy' ? '已复制' : '复制结果'}
-          </button>
-        </div>
+    <div className="space-y-3">
+      <textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="输入或粘贴文本..."
+        className="w-full h-28 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
+      />
+
+      <div className="flex items-center justify-between text-[11px] font-mono text-[#6A7B95] px-1">
+        <span>字符数: {input.length}</span>
+        <span>单词数: {input.trim() ? input.trim().split(/\s+/).length : 0}</span>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <button onClick={handleUpper} className="tool-btn">全部大写</button>
-        <button onClick={handleLower} className="tool-btn">全部小写</button>
+        <button onClick={handleUpper} className="tool-btn">大写 (UPPER)</button>
+        <button onClick={handleLower} className="tool-btn">小写 (lower)</button>
         <button onClick={handleTitle} className="tool-btn">首字母大写</button>
-        <button onClick={handleCamel} className="tool-btn">驼峰命名</button>
-        <button onClick={handleSnake} className="tool-btn">下划线命名</button>
-        <button onClick={handleKebab} className="tool-btn">中划线命名</button>
+        <button onClick={handleCamel} className="tool-btn">转驼峰 (camelCase)</button>
+        <button onClick={handleSnake} className="tool-btn">转下划线 (snake_case)</button>
+        <button onClick={handleTrim} className="tool-btn">压缩空白</button>
       </div>
-      <button onClick={handleTrim} className="w-full tool-btn">
-        清除空行与首尾空格
-      </button>
+
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={() => onCopy(input, 'str-copy')}
+          className="flex-1 tool-btn flex items-center justify-center gap-1.5"
+        >
+          {copiedKey === 'str-copy' ? <Check className="w-3.5 h-3.5 text-[#5CF2C4]" /> : <Copy className="w-3.5 h-3.5" />}
+          复制结果
+        </button>
+        <button onClick={() => setInput('')} className="tool-btn text-[#E06C75]">
+          清空
+        </button>
+      </div>
     </div>
   );
 }
@@ -405,105 +621,75 @@ function StringFormatTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: 
    子工具 2: 正则表达式 (Regex Tester)
    ========================================================================= */
 function RegexTesterTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
-  const [pattern, setPattern] = useState('\\d+');
+  const [pattern, setPattern] = useState('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}');
   const [flags, setFlags] = useState('g');
-  const [text, setText] = useState('Today is 2026-10-09, order #42981.');
-  const [matches, setMatches] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [testText, setTestText] = useState('联系邮箱：ciooool@gmail.com 或 support@haiwell.com 随时来信。');
 
-  useEffect(() => {
+  const { matches, error } = useMemo(() => {
     try {
-      if (!pattern) {
-        setMatches([]);
-        setError(null);
-        return;
-      }
-      const reg = new RegExp(pattern, flags);
-      const res: string[] = [];
-      if (flags.includes('g')) {
-        let m;
-        while ((m = reg.exec(text)) !== null) {
-          res.push(m[0]);
-          if (m.index === reg.lastIndex) reg.lastIndex++;
-        }
-      } else {
-        const m = reg.exec(text);
-        if (m) res.push(m[0]);
-      }
-      setMatches(res);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message);
-      setMatches([]);
+      if (!pattern) return { matches: [], error: null };
+      const regex = new RegExp(pattern, flags);
+      const m = Array.from(testText.matchAll(regex));
+      return { matches: m, error: null };
+    } catch (e: any) {
+      return { matches: [], error: e.message };
     }
-  }, [pattern, flags, text]);
+  }, [pattern, flags, testText]);
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-mono text-[#7D8FA9]">正则表达式 / 标志</label>
-        <div className="flex gap-2">
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
           <input
             type="text"
             value={pattern}
             onChange={(e) => setPattern(e.target.value)}
-            placeholder="例如: \d+"
-            className="flex-1 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#5CF2C4] focus:border-[#5CF2C4] focus:outline-none"
-          />
-          <input
-            type="text"
-            value={flags}
-            onChange={(e) => setFlags(e.target.value)}
-            placeholder="g / i / m"
-            className="w-16 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#8FB5E8] focus:border-[#5CF2C4] focus:outline-none text-center"
+            placeholder="输入正则表达式..."
+            className="w-full px-2.5 py-1.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#5CF2C4] focus:border-[#5CF2C4] focus:outline-none"
           />
         </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-mono text-[#7D8FA9]">测试匹配文本</label>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="w-full h-20 p-2.5 rounded-lg bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
+        <input
+          type="text"
+          value={flags}
+          onChange={(e) => setFlags(e.target.value)}
+          placeholder="flags"
+          className="w-16 px-2 py-1.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#8C9EB8] text-center focus:border-[#5CF2C4] focus:outline-none"
         />
       </div>
 
       {error ? (
-        <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-1.5">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{error}</span>
-        </div>
+        <p className="text-[11px] font-mono text-rose-400">正则错误: {error}</p>
       ) : (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-mono text-[#7D8FA9]">
-            <span>匹配命中: {matches.length} 处</span>
-            {matches.length > 0 && (
-              <button
-                onClick={() => onCopy(matches.join('\n'), 'reg-copy')}
-                className="text-[#5CF2C4] hover:underline flex items-center gap-1"
-              >
-                {copiedKey === 'reg-copy' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                复制所有匹配
-              </button>
-            )}
-          </div>
-          <div className="max-h-24 overflow-y-auto p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] flex flex-wrap gap-1.5">
-            {matches.length > 0 ? (
-              matches.map((m, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-0.5 rounded bg-[#16253C] border border-[#273B5E] text-[#5CF2C4] font-mono text-xs"
-                >
-                  {m}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs text-[#52637D] font-mono">暂无匹配</span>
-            )}
-          </div>
-        </div>
+        <p className="text-[11px] font-mono text-[#6A7B95]">找到 {matches.length} 处匹配</p>
       )}
+
+      <textarea
+        value={testText}
+        onChange={(e) => setTestText(e.target.value)}
+        placeholder="输入用于测试的文本..."
+        className="w-full h-24 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
+      />
+
+      <div className="space-y-1.5">
+        <div className="text-[10px] font-mono uppercase text-[#6A7B95]">匹配结果:</div>
+        <div className="max-h-28 overflow-y-auto space-y-1 p-2 rounded-xl bg-[#0B101C] border border-[#1E2B46]">
+          {matches.length === 0 ? (
+            <span className="text-[11px] font-mono text-[#5C6D89]">暂无匹配项</span>
+          ) : (
+            matches.map((m, idx) => (
+              <div key={idx} className="flex items-center justify-between text-xs font-mono text-[#5CF2C4] bg-[#121A2C] px-2 py-1 rounded">
+                <span>{m[0]}</span>
+                <button
+                  onClick={() => onCopy(m[0], `match-${idx}`)}
+                  className="text-[#7C8DA6] hover:text-white cursor-pointer"
+                >
+                  {copiedKey === `match-${idx}` ? <Check className="w-3 h-3 text-[#5CF2C4]" /> : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -513,113 +699,110 @@ function RegexTesterTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: s
    ========================================================================= */
 function PasswordGenTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
   const [length, setLength] = useState(16);
-  const [includeUpper, setIncludeUpper] = useState(true);
-  const [includeLower, setIncludeLower] = useState(true);
-  const [includeNumbers, setIncludeNumbers] = useState(true);
-  const [includeSymbols, setIncludeSymbols] = useState(true);
+  const [useUpper, setUseUpper] = useState(true);
+  const [useLower, setUseLower] = useState(true);
+  const [useNumbers, setUseNumbers] = useState(true);
+  const [useSymbols, setUseSymbols] = useState(true);
   const [password, setPassword] = useState('');
 
   const generate = useCallback(() => {
     let chars = '';
-    if (includeUpper) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    if (includeLower) chars += 'abcdefghijklmnopqrstuvwxyz';
-    if (includeNumbers) chars += '0123456789';
-    if (includeSymbols) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    if (useUpper) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (useLower) chars += 'abcdefghijklmnopqrstuvwxyz';
+    if (useNumbers) chars += '0123456789';
+    if (useSymbols) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?';
 
     if (!chars) {
       setPassword('');
       return;
     }
 
-    const array = new Uint32Array(length);
-    window.crypto.getRandomValues(array);
+    const arr = new Uint32Array(length);
+    crypto.getRandomValues(arr);
     let result = '';
     for (let i = 0; i < length; i++) {
-      result += chars[array[i] % chars.length];
+      result += chars[arr[i] % chars.length];
     }
     setPassword(result);
-  }, [length, includeUpper, includeLower, includeNumbers, includeSymbols]);
+  }, [length, useUpper, useLower, useNumbers, useSymbols]);
 
   useEffect(() => {
     generate();
   }, [generate]);
 
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-3">
+      {/* 密码展示区 */}
       <div className="p-3 rounded-xl bg-[#0B101C] border border-[#1E2B46] flex items-center justify-between">
-        <span className="font-mono text-sm text-[#5CF2C4] tracking-wider select-all break-all">
-          {password || '请勾选至少一项'}
-        </span>
+        <span className="text-sm font-mono text-[#5CF2C4] select-all break-all">{password || '请至少勾选一种字符'}</span>
         <button
           onClick={() => onCopy(password, 'pwd-copy')}
-          disabled={!password}
-          className="ml-2 p-1.5 rounded-lg bg-[#152033] hover:bg-[#1C2C46] text-[#A2B5D2] hover:text-[#5CF2C4] transition-colors shrink-0 disabled:opacity-30 cursor-pointer"
+          className="p-1.5 text-[#7C8DA6] hover:text-[#5CF2C4] cursor-pointer ml-2"
           title="复制密码"
         >
           {copiedKey === 'pwd-copy' ? <Check className="w-4 h-4 text-[#5CF2C4]" /> : <Copy className="w-4 h-4" />}
         </button>
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-xs font-mono text-[#7D8FA9]">
+      {/* 长度调节滑块 */}
+      <div>
+        <div className="flex justify-between text-xs font-mono text-[#8C9EB8] mb-1">
           <span>密码长度:</span>
-          <span className="text-[#5CF2C4] font-bold">{length} 位</span>
+          <span className="text-[#5CF2C4] font-bold">{length}</span>
         </div>
         <input
           type="range"
           min="8"
-          max="36"
+          max="64"
           value={length}
           onChange={(e) => setLength(Number(e.target.value))}
-          className="w-full accent-[#5CF2C4] cursor-pointer"
+          className="w-full accent-[#5CF2C4] h-1.5 bg-[#121A2C] rounded-lg cursor-pointer"
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-xs font-mono text-[#A2B5D2]">
-        <label className="flex items-center gap-2 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] cursor-pointer">
+      {/* 字符类型勾选 */}
+      <div className="grid grid-cols-2 gap-2 text-xs font-mono text-[#8C9EB8]">
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={includeUpper}
-            onChange={(e) => setIncludeUpper(e.target.checked)}
+            checked={useUpper}
+            onChange={(e) => setUseUpper(e.target.checked)}
             className="accent-[#5CF2C4]"
           />
-          <span>大写字母 (A-Z)</span>
+          大写字母 (A-Z)
         </label>
-        <label className="flex items-center gap-2 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] cursor-pointer">
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={includeLower}
-            onChange={(e) => setIncludeLower(e.target.checked)}
+            checked={useLower}
+            onChange={(e) => setUseLower(e.target.checked)}
             className="accent-[#5CF2C4]"
           />
-          <span>小写字母 (a-z)</span>
+          小写字母 (a-z)
         </label>
-        <label className="flex items-center gap-2 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] cursor-pointer">
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={includeNumbers}
-            onChange={(e) => setIncludeNumbers(e.target.checked)}
+            checked={useNumbers}
+            onChange={(e) => setUseNumbers(e.target.checked)}
             className="accent-[#5CF2C4]"
           />
-          <span>包含数字 (0-9)</span>
+          数字 (0-9)
         </label>
-        <label className="flex items-center gap-2 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] cursor-pointer">
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={includeSymbols}
-            onChange={(e) => setIncludeSymbols(e.target.checked)}
+            checked={useSymbols}
+            onChange={(e) => setUseSymbols(e.target.checked)}
             className="accent-[#5CF2C4]"
           />
-          <span>特殊符号 (!@#$)</span>
+          特殊符号 (!@#$)
         </label>
       </div>
 
-      <button
-        onClick={generate}
-        className="w-full py-2.5 rounded-xl bg-[#5CF2C4]/15 hover:bg-[#5CF2C4]/25 text-[#5CF2C4] border border-[#5CF2C4]/40 font-mono text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
-      >
+      <button onClick={generate} className="w-full tool-btn flex items-center justify-center gap-1.5 py-2">
         <RotateCcw className="w-3.5 h-3.5" />
-        重新生成高熵密码
+        重新生成密码
       </button>
     </div>
   );
@@ -629,93 +812,78 @@ function PasswordGenTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: s
    子工具 4: 时间戳转换 (Timestamp Converter)
    ========================================================================= */
 function TimestampTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
-  const [nowSec, setNowSec] = useState(Math.floor(Date.now() / 1000));
-  const [inputTs, setInputTs] = useState(String(Math.floor(Date.now() / 1000)));
-  const [outputDate, setOutputDate] = useState('');
-  const [isMilli, setIsMilli] = useState(false);
+  const [currentTs, setCurrentTs] = useState(() => Math.floor(Date.now() / 1000));
+  const [inputTs, setInputTs] = useState(() => Math.floor(Date.now() / 1000).toString());
+  const [dateStr, setDateStr] = useState(() => new Date().toISOString().slice(0, 19).replace('T', ' '));
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setNowSec(Math.floor(Date.now() / 1000));
+      setCurrentTs(Math.floor(Date.now() / 1000));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const convertTsToDate = () => {
+  const tsToDate = () => {
     try {
       const num = Number(inputTs);
-      if (isNaN(num)) throw new Error('无效数字');
-      const d = new Date(isMilli ? num : num * 1000);
-      setOutputDate(d.toLocaleString('zh-CN', { hour12: false }) + ` (UTC: ${d.toISOString()})`);
-    } catch {
-      setOutputDate('转换失败，请输入有效时间戳');
-    }
+      const isMs = inputTs.length > 11;
+      const d = new Date(isMs ? num : num * 1000);
+      setDateStr(d.toISOString().slice(0, 19).replace('T', ' '));
+    } catch {}
   };
 
-  useEffect(() => {
-    convertTsToDate();
-  }, [inputTs, isMilli]);
+  const dateToTs = () => {
+    try {
+      const d = new Date(dateStr.replace(' ', 'T'));
+      setInputTs(Math.floor(d.getTime() / 1000).toString());
+    } catch {}
+  };
 
   return (
-    <div className="space-y-3.5">
-      {/* 实时时间戳状态 */}
+    <div className="space-y-3">
+      {/* 当前时间戳跳动卡片 */}
       <div className="p-3 rounded-xl bg-[#0B101C] border border-[#1E2B46] flex items-center justify-between">
         <div>
-          <span className="text-[10px] font-mono text-[#6A7B95] block">当前 Unix 时间戳 (秒)</span>
-          <span className="text-sm font-mono font-bold text-[#5CF2C4]">{nowSec}</span>
+          <p className="text-[10px] font-mono text-[#6A7B95]">当前 Unix 时间戳 (秒)</p>
+          <p className="text-base font-mono text-[#5CF2C4] font-bold">{currentTs}</p>
         </div>
         <button
-          onClick={() => onCopy(String(nowSec), 'ts-now')}
-          className="px-2.5 py-1 rounded-lg bg-[#152033] hover:bg-[#1C2C46] text-[#A2B5D2] hover:text-[#5CF2C4] text-xs font-mono transition-colors flex items-center gap-1 cursor-pointer"
+          onClick={() => onCopy(currentTs.toString(), 'curr-ts')}
+          className="tool-btn text-xs py-1 px-2.5 flex items-center gap-1"
         >
-          {copiedKey === 'ts-now' ? <Check className="w-3 h-3 text-[#5CF2C4]" /> : <Copy className="w-3 h-3" />}
-          复制当前
+          {copiedKey === 'curr-ts' ? <Check className="w-3 h-3 text-[#5CF2C4]" /> : <Copy className="w-3 h-3" />}
+          复制
         </button>
       </div>
 
-      {/* 转换输入 */}
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-mono text-[#7D8FA9]">时间戳转日期</label>
+      <div className="space-y-2">
+        <label className="text-xs font-mono text-[#8C9EB8]">时间戳 (秒/毫秒):</label>
         <div className="flex gap-2">
           <input
             type="text"
             value={inputTs}
-            onChange={(e) => setInputTs(e.target.value.trim())}
-            placeholder="输入时间戳..."
-            className="flex-1 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none"
+            onChange={(e) => setInputTs(e.target.value)}
+            className="flex-1 px-2.5 py-1.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none"
           />
-          <button
-            onClick={() => setInputTs(String(isMilli ? Date.now() : Math.floor(Date.now() / 1000)))}
-            className="px-3 tool-btn"
-          >
-            填入现在
+          <button onClick={tsToDate} className="tool-btn text-xs px-3">
+            转日期 ➔
           </button>
         </div>
       </div>
 
-      {/* 毫秒切换 */}
-      <label className="flex items-center gap-2 text-xs font-mono text-[#A2B5D2] cursor-pointer">
-        <input
-          type="checkbox"
-          checked={isMilli}
-          onChange={(e) => setIsMilli(e.target.checked)}
-          className="accent-[#5CF2C4]"
-        />
-        <span>按毫秒处理 (13位时间戳，未勾选时按10位秒处理)</span>
-      </label>
-
-      {/* 结果展示 */}
-      <div className="p-2.5 rounded-lg bg-[#0B101C] border border-[#1E2B46] flex items-center justify-between text-xs font-mono text-[#5CF2C4] break-all">
-        <span>{outputDate}</span>
-        {outputDate && !outputDate.includes('失败') && (
-          <button
-            onClick={() => onCopy(outputDate, 'date-out')}
-            className="ml-2 text-[#7C8DA6] hover:text-[#5CF2C4] shrink-0"
-            title="复制结果"
-          >
-            {copiedKey === 'date-out' ? <Check className="w-3.5 h-3.5 text-[#5CF2C4]" /> : <Copy className="w-3.5 h-3.5" />}
+      <div className="space-y-2">
+        <label className="text-xs font-mono text-[#8C9EB8]">标准日期 (YYYY-MM-DD HH:mm:ss):</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={dateStr}
+            onChange={(e) => setDateStr(e.target.value)}
+            className="flex-1 px-2.5 py-1.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none"
+          />
+          <button onClick={dateToTs} className="tool-btn text-xs px-3">
+            转时间戳 ➔
           </button>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -725,75 +893,54 @@ function TimestampTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: str
    子工具 5: Cron 表达式 (Cron Parser)
    ========================================================================= */
 function CronParserTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
-  const [cron, setCron] = useState('*/15 * * * *');
-  const [explanation, setExplanation] = useState('');
-
-  const parseCron = (expr: string) => {
-    const parts = expr.trim().split(/\s+/);
-    if (parts.length !== 5) {
-      return '标准格式为 5 段：分 时 日 月 周 (例如: */5 * * * *)';
-    }
-    const [m, h, dom, mon, dow] = parts;
-    if (expr === '* * * * *') return '每分钟执行一次';
-    if (expr === '*/5 * * * *') return '每 5 分钟执行一次';
-    if (expr === '*/15 * * * *') return '每 15 分钟执行一次';
-    if (expr === '0 * * * *') return '每小时的整点 (第0分) 执行一次';
-    if (expr === '0 0 * * *') return '每天午夜 (00:00:00) 执行一次';
-    if (expr === '0 9 * * 1-5') return '每个工作日 (周一至周五) 上午 09:00:00 执行';
-    if (expr === '0 0 1 * *') return '每月 1 号午夜 (00:00:00) 执行';
-    return `执行计划：第 ${m} 分, 第 ${h} 时, 日期: ${dom}, 月份: ${mon}, 星期: ${dow}`;
-  };
-
-  useEffect(() => {
-    setExplanation(parseCron(cron));
-  }, [cron]);
+  const [cron, setCron] = useState('0 0 * * *');
 
   const presets = [
+    { label: '每分钟', val: '* * * * *' },
     { label: '每 5 分钟', val: '*/5 * * * *' },
     { label: '每小时整点', val: '0 * * * *' },
     { label: '每天午夜', val: '0 0 * * *' },
-    { label: '工作日上午9点', val: '0 9 * * 1-5' },
-    { label: '每月1号', val: '0 0 1 * *' },
+    { label: '每周一凌晨', val: '0 0 * * 1' },
   ];
 
   return (
-    <div className="space-y-3.5">
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-mono text-[#7D8FA9]">Cron 表达式 (分 时 日 月 周)</label>
-        <div className="flex gap-2">
+    <div className="space-y-3">
+      <div className="p-3 rounded-xl bg-[#0B101C] border border-[#1E2B46] space-y-1">
+        <p className="text-[10px] font-mono text-[#6A7B95]">Cron 表达式 (分 时 日 月 周)</p>
+        <div className="flex items-center justify-between">
           <input
             type="text"
             value={cron}
             onChange={(e) => setCron(e.target.value)}
-            className="flex-1 p-2 rounded-lg bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#5CF2C4] font-bold focus:border-[#5CF2C4] focus:outline-none"
+            className="w-full bg-transparent text-base font-mono text-[#5CF2C4] font-bold focus:outline-none"
           />
           <button
             onClick={() => onCopy(cron, 'cron-copy')}
-            className="px-3 tool-btn flex items-center gap-1"
+            className="tool-btn text-xs py-1 px-2.5 shrink-0 ml-2"
           >
             {copiedKey === 'cron-copy' ? <Check className="w-3 h-3 text-[#5CF2C4]" /> : <Copy className="w-3 h-3" />}
-            复制
           </button>
         </div>
       </div>
 
-      {/* 预设标签 */}
-      <div className="flex flex-wrap gap-1.5">
-        {presets.map((p) => (
-          <button
-            key={p.val}
-            onClick={() => setCron(p.val)}
-            className="px-2.5 py-1 rounded-md bg-[#111A2C] border border-[#1E2A44] hover:border-[#5CF2C4]/40 text-[#8B9DB8] hover:text-[#5CF2C4] text-[11px] font-mono transition-colors cursor-pointer"
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 中文语义化解读 */}
-      <div className="p-3 rounded-xl bg-[#0B101C] border border-[#1E2B46] space-y-1">
-        <span className="text-[10px] font-mono text-[#6A7B95] block uppercase">自然语言解析</span>
-        <p className="text-xs font-mono text-[#E2EAF8]">{explanation}</p>
+      <div className="space-y-1.5">
+        <div className="text-[10px] font-mono uppercase text-[#6A7B95]">快捷常用预设:</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {presets.map((p) => (
+            <button
+              key={p.label}
+              onClick={() => setCron(p.val)}
+              className={`p-2 rounded-lg text-xs font-mono text-left border transition-all cursor-pointer ${
+                cron === p.val
+                  ? 'bg-[#18233C] border-[#5CF2C4] text-[#5CF2C4]'
+                  : 'bg-[#0B101C] border-[#1E2B46] text-[#8C9EB8] hover:border-[#354668]'
+              }`}
+            >
+              <div className="font-semibold">{p.label}</div>
+              <div className="text-[10px] opacity-70 mt-0.5">{p.val}</div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -803,103 +950,293 @@ function CronParserTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: st
    子工具 6: JSON 工具 (JSON Tools)
    ========================================================================= */
 function JsonTools({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
-  const [jsonStr, setJsonStr] = useState('{"name":"Ciooool","role":"Architect","stack":["Go","Next.js"]}');
-  const [status, setStatus] = useState<string | null>(null);
+  const [input, setInput] = useState('{\n  "name": "Ciooool",\n  "role": "Architect & Maker",\n  "status": "online"\n}');
+  const [error, setError] = useState<string | null>(null);
 
-  const format2 = () => {
+  const handleFormat = () => {
     try {
-      const obj = JSON.parse(jsonStr);
-      setJsonStr(JSON.stringify(obj, null, 2));
-      setStatus('格式化成功 (2 空格)');
+      const obj = JSON.parse(input);
+      setInput(JSON.stringify(obj, null, 2));
+      setError(null);
     } catch (e: any) {
-      setStatus('语法错误: ' + e.message);
+      setError(e.message);
     }
   };
 
-  const minify = () => {
+  const handleMinify = () => {
     try {
-      const obj = JSON.parse(jsonStr);
-      setJsonStr(JSON.stringify(obj));
-      setStatus('压缩成功');
+      const obj = JSON.parse(input);
+      setInput(JSON.stringify(obj));
+      setError(null);
     } catch (e: any) {
-      setStatus('语法错误: ' + e.message);
+      setError(e.message);
     }
   };
 
   return (
     <div className="space-y-3">
       <textarea
-        value={jsonStr}
-        onChange={(e) => setJsonStr(e.target.value)}
-        placeholder="在此粘贴 JSON 文本..."
-        className="w-full h-36 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
+        value={input}
+        onChange={(e) => {
+          setInput(e.target.value);
+          setError(null);
+        }}
+        placeholder="粘贴或输入 JSON 字符串..."
+        className="w-full h-40 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
+        spellCheck={false}
       />
 
-      <div className="flex gap-2">
-        <button onClick={format2} className="flex-1 tool-btn font-bold">
-          美化 JSON (2格)
-        </button>
-        <button onClick={minify} className="flex-1 tool-btn">
-          压缩单行 (Minify)
-        </button>
+      {error && <p className="text-[11px] font-mono text-rose-400">JSON 语法错误: {error}</p>}
+
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={handleFormat} className="tool-btn">格式化排版</button>
+        <button onClick={handleMinify} className="tool-btn">压缩为单行</button>
         <button
-          onClick={() => onCopy(jsonStr, 'json-copy')}
-          className="px-3 tool-btn flex items-center gap-1"
+          onClick={() => onCopy(input, 'json-copy')}
+          className="tool-btn flex items-center justify-center gap-1"
         >
           {copiedKey === 'json-copy' ? <Check className="w-3.5 h-3.5 text-[#5CF2C4]" /> : <Copy className="w-3.5 h-3.5" />}
-          复制
+          复制内容
         </button>
       </div>
-
-      {status && (
-        <p
-          className={`text-[11px] font-mono truncate px-1 ${
-            status.includes('错误') ? 'text-rose-400' : 'text-[#5CF2C4]'
-          }`}
-        >
-          {status}
-        </p>
-      )}
     </div>
   );
 }
 
 /* =========================================================================
-   子工具 7: URL 编码工具 (URL Codec)
+   子工具 7: JSON 转 Go Struct (原案头工具 1 完美整合)
    ========================================================================= */
-function UrlCodecTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
-  const [text, setText] = useState('https://github.com/ciooool?name=全栈架构师&mode=dev');
+const SAMPLE_JSON_PAYLOAD = `{
+  "request_id": "req_8f9021a8",
+  "client": {
+    "organization": "Hyperion Labs",
+    "tier": "enterprise",
+    "is_active": true
+  },
+  "metrics": {
+    "qps": 84200,
+    "p99_latency_ms": 3.42,
+    "nodes": [
+      { "id": "node-us-east-1", "healthy": true, "load": 0.42 },
+      { "id": "node-ap-east-1", "healthy": true, "load": 0.38 }
+    ]
+  }
+}`;
 
-  const encode = () => {
+function JsonToGoTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
+  const [jsonInput, setJsonInput] = useState(SAMPLE_JSON_PAYLOAD);
+  const [rootName, setRootName] = useState('TelemetryPayload');
+
+  const { code, error } = useMemo(() => {
+    return jsonToGo(jsonInput, rootName || 'Payload');
+  }, [jsonInput, rootName]);
+
+  const handleBeautify = () => {
     try {
-      setText(encodeURIComponent(text));
+      setJsonInput(JSON.stringify(JSON.parse(jsonInput), null, 2));
     } catch {}
   };
 
-  const decode = () => {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <label className="text-[11px] font-mono text-[#6A7B95] whitespace-nowrap">根结构体:</label>
+        <input
+          type="text"
+          value={rootName}
+          onChange={(e) => setRootName(e.target.value)}
+          placeholder="Payload"
+          className="flex-1 px-2.5 py-1 text-xs font-mono rounded-lg bg-[#0B101C] border border-[#1E2B46] text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none"
+        />
+        <button onClick={handleBeautify} className="tool-btn text-[11px] py-1 px-2">
+          格式化
+        </button>
+        <button onClick={() => setJsonInput(SAMPLE_JSON_PAYLOAD)} className="tool-btn text-[11px] py-1 px-2 text-[#5CF2C4]">
+          示例
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <div className="text-[10px] font-mono text-[#6A7B95] mb-1">JSON 输入:</div>
+          <textarea
+            value={jsonInput}
+            onChange={(e) => setJsonInput(e.target.value)}
+            placeholder="粘贴 JSON..."
+            className="w-full h-28 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
+            spellCheck={false}
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between text-[10px] font-mono text-[#6A7B95] mb-1">
+            <span>Go Struct 实时生成:</span>
+            {code && !error && (
+              <button
+                onClick={() => onCopy(code, 'go-copy')}
+                className="text-[#5CF2C4] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                {copiedKey === 'go-copy' ? <Check className="w-3 h-3 text-[#5CF2C4]" /> : <Copy className="w-3 h-3" />}
+                一键复制 Struct
+              </button>
+            )}
+          </div>
+          <div className="w-full h-32 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono overflow-auto relative">
+            {error ? (
+              <div className="flex items-start gap-1.5 text-rose-400 p-1 text-[11px]">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            ) : code ? (
+              <pre className="text-[#5CF2C4] whitespace-pre text-[11px] leading-relaxed">{code}</pre>
+            ) : (
+              <div className="text-[#5C6D89] text-[11px] flex items-center justify-center h-full">请输入合法 JSON...</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   子工具 8: 高熵 Token 生成器 (原案头工具 2 完美整合)
+   ========================================================================= */
+function TokenGenTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
+  const [format, setFormat] = useState<'base62' | 'hex' | 'uuid' | 'base64url'>('base62');
+  const [length, setLength] = useState(32);
+  const [prefix, setPrefix] = useState('sk_live');
+  const [token, setToken] = useState(() => generateSecureToken('base62', 32, 'sk_live'));
+
+  const handleRegenerate = () => {
+    setToken(generateSecureToken(format, length, prefix));
+  };
+
+  const handleFormatChange = (f: 'base62' | 'hex' | 'uuid' | 'base64url') => {
+    setFormat(f);
+    setToken(generateSecureToken(f, length, prefix));
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* 算法选择 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+        {[
+          { id: 'base62', label: 'Base62' },
+          { id: 'hex', label: 'Hex 16进制' },
+          { id: 'uuid', label: 'UUID v4' },
+          { id: 'base64url', label: 'Base64URL' },
+        ].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleFormatChange(item.id as any)}
+            className={`py-1.5 px-2 rounded-lg text-xs font-mono border text-center transition-all cursor-pointer ${
+              format === item.id
+                ? 'bg-[#18233C] border-[#5CF2C4] text-[#5CF2C4] font-bold shadow-sm'
+                : 'bg-[#0B101C] border-[#1E2B46] text-[#7A8DA6] hover:border-[#344669]'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 长度与前缀 */}
+      <div className="grid grid-cols-2 gap-3 items-center">
+        {format !== 'uuid' ? (
+          <div>
+            <div className="flex justify-between text-[11px] font-mono text-[#6A7B95] mb-1">
+              <span>熵长度:</span>
+              <span className="text-[#5CF2C4] font-bold">{length} 字节</span>
+            </div>
+            <input
+              type="range"
+              min="8"
+              max="128"
+              step="4"
+              value={length}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setLength(val);
+                setToken(generateSecureToken(format, val, prefix));
+              }}
+              className="w-full accent-[#5CF2C4] h-1.5 bg-[#121A2C] rounded-lg cursor-pointer"
+            />
+          </div>
+        ) : (
+          <div className="text-[11px] font-mono text-[#6A7B95]">RFC 4122 标准 UUID</div>
+        )}
+
+        <div>
+          <label className="block text-[11px] font-mono text-[#6A7B95] mb-1">自定义前缀:</label>
+          <input
+            type="text"
+            value={prefix}
+            onChange={(e) => {
+              setPrefix(e.target.value);
+              setToken(generateSecureToken(format, length, e.target.value));
+            }}
+            placeholder="如 sk_live"
+            className="w-full px-2.5 py-1 text-xs font-mono rounded-lg bg-[#0B101C] border border-[#1E2B46] text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Token 展示卡片 */}
+      <div className="p-3 rounded-xl bg-[#0B101C] border border-[#1E2B46] space-y-2">
+        <div className="flex items-center justify-between text-[10px] font-mono text-[#6A7B95]">
+          <span>生成结果 (Web Crypto API):</span>
+          <button
+            onClick={() => onCopy(token, 'token-copy')}
+            className="text-[#5CF2C4] hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            {copiedKey === 'token-copy' ? <Check className="w-3 h-3 text-[#5CF2C4]" /> : <Copy className="w-3 h-3" />}
+            复制密匙
+          </button>
+        </div>
+        <p className="text-xs font-mono text-[#5CF2C4] break-all select-all font-semibold">{token}</p>
+      </div>
+
+      <button onClick={handleRegenerate} className="w-full tool-btn flex items-center justify-center gap-1.5 py-2">
+        <RotateCcw className="w-3.5 h-3.5" />
+        重新掷取新令牌
+      </button>
+    </div>
+  );
+}
+
+/* =========================================================================
+   子工具 9: URL 编码工具 (URL Codec)
+   ========================================================================= */
+function UrlCodecTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
+  const [input, setInput] = useState('https://ciooool.dev/?tag=全栈架构&source=github');
+
+  const handleEncode = () => {
     try {
-      setText(decodeURIComponent(text));
+      setInput(encodeURIComponent(input));
+    } catch {}
+  };
+
+  const handleDecode = () => {
+    try {
+      setInput(decodeURIComponent(input));
     } catch {}
   };
 
   return (
     <div className="space-y-3">
       <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="输入需要编码或解码的 URL / 文本..."
-        className="w-full h-28 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="输入需要编码或解码的 URL 文本..."
+        className="w-full h-32 p-2.5 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#E2EAF8] focus:border-[#5CF2C4] focus:outline-none resize-none"
       />
 
       <div className="flex gap-2">
-        <button onClick={encode} className="flex-1 tool-btn font-bold">
-          URL 编码 (Encode)
-        </button>
-        <button onClick={decode} className="flex-1 tool-btn">
-          URL 解码 (Decode)
-        </button>
+        <button onClick={handleEncode} className="flex-1 tool-btn">URL 编码 (Encode)</button>
+        <button onClick={handleDecode} className="flex-1 tool-btn">URL 解码 (Decode)</button>
         <button
-          onClick={() => onCopy(text, 'url-copy')}
+          onClick={() => onCopy(input, 'url-copy')}
           className="px-3 tool-btn flex items-center gap-1"
         >
           {copiedKey === 'url-copy' ? <Check className="w-3.5 h-3.5 text-[#5CF2C4]" /> : <Copy className="w-3.5 h-3.5" />}
@@ -911,24 +1248,28 @@ function UrlCodecTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: stri
 }
 
 /* =========================================================================
-   子工具 8: UUID 生成器 (UUID Generator)
+   子工具 10: UUID 生成器 (UUID Generator)
    ========================================================================= */
 function UuidGenTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
-  const [uuids, setUuids] = useState<string[]>([]);
-  const [count, setCount] = useState(5);
-  const [uppercase, setUppercase] = useState(false);
+  const [count, setCount] = useState(3);
   const [hyphens, setHyphens] = useState(true);
+  const [uppercase, setUppercase] = useState(false);
+  const [uuids, setUuids] = useState<string[]>([]);
 
   const generate = useCallback(() => {
     const list: string[] = [];
     for (let i = 0; i < count; i++) {
-      let id = crypto.randomUUID();
+      let id = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
       if (!hyphens) id = id.replace(/-/g, '');
       if (uppercase) id = id.toUpperCase();
       list.push(id);
     }
     setUuids(list);
-  }, [count, uppercase, hyphens]);
+  }, [count, hyphens, uppercase]);
 
   useEffect(() => {
     generate();
@@ -936,47 +1277,34 @@ function UuidGenTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: strin
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs font-mono text-[#A2B5D2]">
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={uppercase}
-              onChange={(e) => setUppercase(e.target.checked)}
-              className="accent-[#5CF2C4]"
-            />
-            <span>大写</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hyphens}
-              onChange={(e) => setHyphens(e.target.checked)}
-              className="accent-[#5CF2C4]"
-            />
-            <span>带连字符</span>
-          </label>
-        </div>
-
-        <select
-          value={count}
-          onChange={(e) => setCount(Number(e.target.value))}
-          className="p-1 rounded bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#5CF2C4]"
-        >
-          <option value={1}>生成 1 个</option>
-          <option value={5}>生成 5 个</option>
-          <option value={10}>生成 10 个</option>
-        </select>
+      <div className="flex items-center justify-between text-xs font-mono text-[#8C9EB8]">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hyphens}
+            onChange={(e) => setHyphens(e.target.checked)}
+            className="accent-[#5CF2C4]"
+          />
+          包含连字符 (-)
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={uppercase}
+            onChange={(e) => setUppercase(e.target.checked)}
+            className="accent-[#5CF2C4]"
+          />
+          全大写 (UPPER)
+        </label>
       </div>
 
-      <div className="max-h-36 overflow-y-auto space-y-1 p-2 rounded-xl bg-[#0B101C] border border-[#1E2B46] font-mono text-xs text-[#E2EAF8]">
+      <div className="space-y-1.5 max-h-36 overflow-y-auto">
         {uuids.map((id, i) => (
-          <div key={i} className="flex items-center justify-between p-1 hover:bg-[#131D30] rounded">
+          <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-[#0B101C] border border-[#1E2B46] text-xs font-mono text-[#5CF2C4]">
             <span className="truncate pr-2">{id}</span>
             <button
               onClick={() => onCopy(id, `uuid-${i}`)}
-              className="text-[#6A7B95] hover:text-[#5CF2C4] shrink-0"
-              title="复制"
+              className="p-1 text-[#7C8DA6] hover:text-white cursor-pointer"
             >
               {copiedKey === `uuid-${i}` ? <Check className="w-3 h-3 text-[#5CF2C4]" /> : <Copy className="w-3 h-3" />}
             </button>
@@ -1002,7 +1330,7 @@ function UuidGenTool({ onCopy, copiedKey }: { onCopy: (text: string, key?: strin
 }
 
 /* =========================================================================
-   子工具 9: 加密工具 (Crypto Tools: Base64 / SHA-256)
+   子工具 11: 加密工具 (Crypto Tools: Base64 / SHA-256)
    ========================================================================= */
 function CryptoTools({ onCopy, copiedKey }: { onCopy: (text: string, key?: string) => void; copiedKey: string | null }) {
   const [input, setInput] = useState('Hello, World!');

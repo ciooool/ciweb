@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { portfolioData } from "@/data/portfolioData";
 import { useTheme } from "@/context/ThemeContext";
 import { soundManager } from "@/utils/audio";
@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   ArrowUpRight,
+  Search,
 } from "lucide-react";
 import { GithubIcon } from "@/components/Icons";
 
@@ -24,6 +25,13 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isMac, setIsMac] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof navigator !== "undefined") {
+      setIsMac(/(Mac|iPhone|iPod|iPad)/i.test(navigator.platform || navigator.userAgent));
+    }
+  }, []);
 
   const handleToggleSound = () => {
     const next = !isMuted;
@@ -37,17 +45,24 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
     toggleTheme();
   };
 
+  const handleOpenTools = () => {
+    soundManager.playClick();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("open-quick-tools"));
+    }
+  };
+
   const navLinks = [
     { href: "#about", label: "关于主理" },
     { href: "#projects", label: "独立作品" },
     { href: "#books", label: "心智书房" },
     { href: "#skills", label: "技术栈" },
-    { href: "#tools", label: "案头工具" },
     { href: "#contact", label: "见字如面" },
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-theme-line backdrop-blur-md transition-colors"
+    <header
+      className="sticky top-0 z-40 w-full border-b border-theme-line backdrop-blur-md transition-colors"
       style={{ backgroundColor: "var(--navbar-bg)" }}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -80,6 +95,19 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* 快捷工具 ⌘K 胶囊触发器 (对标 media_1791535407208.png) */}
+          <button
+            onClick={handleOpenTools}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#101626]/90 hover:bg-[#162138] border border-[#212E4A] hover:border-[#5CF2C4]/40 text-xs font-mono text-[#8C9EB8] hover:text-[#EAF0FF] transition-all cursor-pointer group shadow-sm mr-1"
+            title={`唤醒快捷工具 (${isMac ? "⌘K" : "Ctrl+K"})`}
+          >
+            <Search className="w-3.5 h-3.5 text-[#5CF2C4] group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-medium tracking-wide">快捷工具</span>
+            <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-md bg-[#18233C] border border-[#293858] text-[#7C8DA6] group-hover:text-[#5CF2C4] shadow-inner transition-colors ml-0.5">
+              {isMac ? "⌘ K" : "Ctrl K"}
+            </kbd>
+          </button>
+
           {/* 1. 拉灯体验 */}
           {onOpenLamp && (
             <button
@@ -87,7 +115,7 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
                 soundManager.playClick();
                 onOpenLamp();
               }}
-              className="p-2 rounded-xl border border-theme-line hover:border-theme-phosphor text-theme-secondary hover:text-theme-phosphor transition-all bg-theme-surface/50 cursor-pointer hidden sm:flex items-center gap-1.5 text-xs font-mono"
+              className="p-2 rounded-xl border border-theme-line hover:border-theme-phosphor text-theme-secondary hover:text-theme-phosphor transition-all bg-theme-surface/50 cursor-pointer hidden md:flex items-center gap-1.5 text-xs font-mono"
               title="进入暗室拉灯体验"
             >
               <Lightbulb className="w-3.5 h-3.5 text-theme-phosphor" />
@@ -172,6 +200,24 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
               {link.label}
             </a>
           ))}
+
+          {/* 移动端快捷工具按钮 */}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              handleOpenTools();
+            }}
+            className="flex items-center justify-between text-theme-secondary hover:text-theme-phosphor py-2 border-t border-theme-line w-full text-left cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-theme-phosphor" />
+              <span>快捷工具箱</span>
+            </span>
+            <kbd className="px-1.5 py-0.5 text-[10px] rounded bg-[#18233C] text-[#7C8DA6]">
+              {isMac ? "⌘ K" : "Ctrl K"}
+            </kbd>
+          </button>
+
           {onOpenLamp && (
             <button
               onClick={() => {
