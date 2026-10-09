@@ -185,3 +185,24 @@ body {
     transform: rotate(-3.5deg);
   }
 }
+
+.tool-btn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+  background-color: #111828;
+  border: 1px solid #1C273E;
+  color: #9FB0D0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  cursor: pointer;
+  text-align: center;
+}
+.tool-btn:hover {
+  background-color: #172238;
+  color: #5CF2C4;
+  border-color: rgba(92, 242, 196, 0.4);
+}
+.tool-btn:active {
+  transform: scale(0.97);
+}

@@ -13,6 +13,7 @@ import LampPullRig from '@/components/LampPullRig';
 import MiniPendantLamp from '@/components/MiniPendantLamp';
 import AmbientBackground from '@/components/AmbientBackground';
 import StreetCanvas from '@/components/StreetCanvas';
+import QuickToolsDrawer from '@/components/QuickToolsDrawer';
 
 export default function Home() {
   const [lampOpen, setLampOpen] = useState(false);
@@ -86,7 +87,10 @@ export default function Home() {
         <StreetCanvas />
       </main>
 
-      {/* 5. 极简页脚 */}
+      {/* 5. 隐藏式快捷工具组件 (唤醒展开抽屉面板，对标 123.haiwell.com) */}
+      {isClient && <QuickToolsDrawer isCurtainClosed={lampOpen} />}
+
+      {/* 6. 极简页脚 */}
       <Footer />
     </div>
   );
