@@ -121,9 +121,9 @@ export const MiniPendantLamp: React.FC<MiniPendantLampProps> = ({
         {/* 黄铜领圈固定口 */}
         <rect x="18" y="32" width="4" height="4" rx="1" fill="url(#miniBrass)" />
 
-        {/* 锥台黑曜石微型灯罩 */}
-        <polygon
-          points="20,35 12,44 28,44"
+        {/* 包豪斯弧面钟形微型灯罩 (Smooth Bell Dome) */}
+        <path
+          d="M 19,34 C 15,35 12,39 11,44 C 11,46 29,46 29,44 C 28,39 25,35 21,34 Z"
           fill="url(#miniObsidian)"
           stroke="#3C527D"
           strokeWidth="0.8"
