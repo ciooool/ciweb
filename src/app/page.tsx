@@ -10,6 +10,7 @@ import { InteractiveLab } from '@/components/InteractiveLab';
 import { ContactSection } from '@/components/ContactSection';
 import Footer from '@/components/Footer';
 import LampPullRig from '@/components/LampPullRig';
+import MiniPendantLamp from '@/components/MiniPendantLamp';
 import AmbientBackground from '@/components/AmbientBackground';
 import StreetCanvas from '@/components/StreetCanvas';
 
@@ -42,7 +43,7 @@ export default function Home() {
       {/* 1. 自适应全屏环境背景 (极光 + 星空画布 + 微光网格) */}
       <AmbientBackground />
 
-      {/* 2. 拟真物理拉绳吊灯组件 (开场沉浸式体验 / 顶栏可随时重温) */}
+      {/* 2. 拟真物理拉绳吊灯组件 (大帷幕开场沉浸式体验 / 随时逆向放下幕布) */}
       {isClient && (
         <LampPullRig
           isOpen={lampOpen}
@@ -50,7 +51,15 @@ export default function Home() {
         />
       )}
 
-      {/* 3. 悬浮极简顶栏 (昼夜切换 / 物理拉灯 / 音效开关 / 快速导航) */}
+      {/* 3. 屏幕右上角常驻微型金属拉线吊灯 (帷幕拉开后常驻发光，拉一下关闭并放下幕布) */}
+      {isClient && !lampOpen && (
+        <MiniPendantLamp
+          onPull={() => setLampOpen(true)}
+          isLit={true}
+        />
+      )}
+
+      {/* 4. 悬浮极简顶栏 (昼夜切换 / 物理拉灯 / 音效开关 / 快速导航) */}
       <Navbar onOpenLamp={() => setLampOpen(true)} />
 
       {/* 4. 核心内容板块 */}

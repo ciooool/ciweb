@@ -173,3 +173,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--phosphor);
 }
+
+@keyframes pendulum {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(3.5deg);
+  }
+  75% {
+    transform: rotate(-3.5deg);
+  }
+}
