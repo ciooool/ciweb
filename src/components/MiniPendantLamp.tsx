@@ -23,7 +23,7 @@ export const MiniPendantLamp: React.FC<MiniPendantLampProps> = ({
     dragStartYRef.current = e.clientY;
 
     const onPointerMove = (moveEvent: PointerEvent) => {
-      const deltaY = Math.max(0, Math.min(22, moveEvent.clientY - dragStartYRef.current));
+      const deltaY = Math.max(0, Math.min(20, moveEvent.clientY - dragStartYRef.current));
       setPullOffset(deltaY);
     };
 
@@ -56,23 +56,23 @@ export const MiniPendantLamp: React.FC<MiniPendantLampProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       title="下拉拉绳 / 点击 · 熄灯闭幕"
     >
-      {/* 悬停提示 Tooltip (向左展开) */}
+      {/* 极简悬停提示 Tooltip (向左展开) */}
       <div
-        className={`absolute top-16 right-7 px-2.5 py-1 rounded-lg text-[10px] font-mono tracking-wider whitespace-nowrap bg-[var(--bg-surface)] text-[var(--phosphor)] border border-[var(--border-line)] shadow-xl backdrop-blur-md transition-all duration-300 pointer-events-none ${
+        className={`absolute top-16 right-8 px-2.5 py-1 rounded-lg text-[10px] font-mono tracking-wider whitespace-nowrap bg-[var(--bg-surface)] text-[var(--phosphor)] border border-[var(--border-line)] shadow-xl backdrop-blur-md transition-all duration-300 pointer-events-none ${
           isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'
         }`}
       >
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--phosphor)] animate-ping" />
-          拉绳 · 熄灯闭幕
+          拉绳 / 点击 · 熄灯闭幕
         </span>
       </div>
 
-      {/* 物理吊灯 SVG 实体 */}
+      {/* 极简高精度工业微吊灯 SVG */}
       <svg
-        width="38"
-        height="100"
-        viewBox="0 0 38 100"
+        width="40"
+        height="105"
+        viewBox="0 0 40 105"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={`transition-transform duration-300 ${
@@ -81,99 +81,122 @@ export const MiniPendantLamp: React.FC<MiniPendantLampProps> = ({
         style={{
           transformOrigin: 'top center',
           filter: isLit
-            ? 'drop-shadow(0 0 12px var(--phosphor)) drop-shadow(0 0 24px var(--phosphor-subtle))'
+            ? 'drop-shadow(0 0 10px rgba(92,242,196,0.65)) drop-shadow(0 0 20px rgba(92,242,196,0.25))'
             : 'none',
         }}
       >
+        <defs>
+          <linearGradient id="miniBrass" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#E6C875" />
+            <stop offset="50%" stopColor="#C9A043" />
+            <stop offset="100%" stopColor="#7E5F1E" />
+          </linearGradient>
+
+          <linearGradient id="miniObsidian" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#101524" />
+            <stop offset="50%" stopColor="#253554" />
+            <stop offset="100%" stopColor="#0B0F1A" />
+          </linearGradient>
+
+          <radialGradient id="miniBead" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="50%" stopColor="#8A9FBF" />
+            <stop offset="100%" stopColor="#1C2638" />
+          </radialGradient>
+        </defs>
+
         {/* 天花板固定扣 */}
-        <rect x="16" y="0" width="6" height="4" rx="1.5" fill="#3A4D73" />
+        <rect x="17" y="0" width="6" height="3" rx="1" fill="#1C273E" stroke="#3A4D73" strokeWidth="0.6" />
 
-        {/* 悬吊金属电线 */}
+        {/* 悬垂纤细金属电线 */}
         <line
-          x1="19"
-          y1="4"
-          x2="19"
-          y2="38"
+          x1="20"
+          y1="3"
+          x2="20"
+          y2="34"
           stroke="var(--border-line)"
-          strokeWidth="1.5"
-          strokeDasharray="2 1"
-        />
-
-        {/* 灯头金属盖 (Socket) */}
-        <path
-          d="M13 38C13 36.5 15.5 35 19 35C22.5 35 25 36.5 25 38L24 43H14L13 38Z"
-          fill="#1F2A44"
-          stroke="#3A4D73"
-          strokeWidth="1"
-        />
-
-        {/* 发光灯泡实体 */}
-        <circle
-          cx="19"
-          cy="48"
-          r="8"
-          fill={isLit ? 'var(--phosphor)' : '#1A2338'}
-          fillOpacity={isLit ? '0.92' : '0.4'}
-          stroke={isLit ? '#FFFFFF' : '#3A4D73'}
           strokeWidth="1.2"
         />
 
-        {/* 内部高亮发光灯丝 */}
+        {/* 黄铜领圈固定口 */}
+        <rect x="18" y="32" width="4" height="4" rx="1" fill="url(#miniBrass)" />
+
+        {/* 锥台黑曜石微型灯罩 */}
+        <polygon
+          points="20,35 12,44 28,44"
+          fill="url(#miniObsidian)"
+          stroke="#3C527D"
+          strokeWidth="0.8"
+        />
+
+        {/* 灯罩下缘边框 */}
+        <ellipse cx="20" cy="44" rx="8" ry="2" fill="#0C101A" stroke="#5CF2C4" strokeWidth="0.7" />
+
+        {/* 发光核心透镜 */}
+        <circle
+          cx="20"
+          cy="46"
+          r="4.5"
+          fill={isLit ? '#FFFFFF' : '#192336'}
+          stroke={isLit ? '#5CF2C4' : '#2A3B57'}
+          strokeWidth="1"
+        />
         {isLit && (
-          <ellipse
-            cx="19"
-            cy="47"
-            rx="3.5"
-            ry="4.5"
-            fill="#FFFFFF"
-            fillOpacity="0.85"
+          <circle
+            cx="20"
+            cy="46"
+            r="2"
+            fill="#5CF2C4"
             className="animate-pulse"
           />
         )}
 
-        {/* 从灯头底部垂下的拉绳与金属小珠 (带下拉交互位移) */}
+        {/* 右侧悬挂微型黄铜吊耳 */}
+        <circle cx="25" cy="45" r="1.5" fill="url(#miniBrass)" />
+
+        {/* 下垂微金属球链 (带下拉位移) */}
         <g
           transform={`translate(0, ${pullOffset})`}
           className="transition-transform duration-75"
         >
-          {/* 拉线 */}
-          <line
-            x1="19"
-            y1="56"
-            x2="19"
-            y2="78"
-            stroke={isHovered ? 'var(--phosphor)' : 'var(--text-muted)'}
-            strokeWidth="1.2"
-          />
+          {/* 链条微金属珠 */}
+          {[50, 55, 60, 65, 70, 75].map((y, i) => (
+            <circle
+              key={i}
+              cx="25"
+              cy={y}
+              r="1.2"
+              fill="url(#miniBead)"
+              stroke="#131B29"
+              strokeWidth="0.4"
+            />
+          ))}
 
           {/* 交互拉动热区 (扩大点击范围) */}
           <rect
-            x="9"
-            y="70"
-            width="20"
-            height="26"
+            x="12"
+            y="72"
+            width="26"
+            height="28"
             fill="transparent"
             onPointerDown={handlePointerDown}
             className="cursor-pointer"
           />
 
-          {/* 末端金属拉坠 (Acorn Bead) */}
-          <circle
-            cx="19"
-            cy="82"
-            r="3.5"
-            fill={isHovered ? 'var(--phosphor)' : '#EAF0FF'}
-            stroke="#1F2A44"
-            strokeWidth="1"
+          {/* 末端精致圆柱胶囊微拉坠 */}
+          <rect
+            x="23.2"
+            y="78"
+            width="3.6"
+            height="11"
+            rx="1.8"
+            fill="#3B4D70"
+            stroke={isHovered ? 'var(--phosphor)' : '#192233'}
+            strokeWidth="0.7"
             className="transition-colors"
           />
-          {/* 小光圈 */}
-          <circle
-            cx="19"
-            cy="82"
-            r="1.2"
-            fill="#05070F"
-          />
+          <line x1="23.5" y1="83" x2="26.5" y2="83" stroke="url(#miniBrass)" strokeWidth="0.6" />
+          <circle cx="25" cy="89" r="1.2" fill="url(#miniBrass)" />
         </g>
       </svg>
     </div>

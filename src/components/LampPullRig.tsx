@@ -19,20 +19,22 @@ export default function LampPullRig({
   const [flickerLevel, setFlickerLevel] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  
-  // 核心幕布位置: 'down' (全屏遮罩) | 'up' (升起到天花板上方)
-  const [curtainPos, setCurtainPos] = useState<'down' | 'up'>(isOpen ? 'down' : 'up');
+  const [isHoveringBead, setIsHoveringBead] = useState(false);
+
+  // 幕布可见性与平滑淡入淡出状态:
+  // 当 isOpen 为 true 时初始呈现(淡入), 当点灯完成后缓慢淡化消失(淡出)
+  const [curtainVisible, setCurtainVisible] = useState(isOpen);
 
   const svgRef = useRef<SVGSVGElement>(null);
 
   // 物理坐标系统 (SVG 1000x900 空间)
-  const anchor = { x: 536, y: 286 };
-  const restPos = { x: 536, y: 440 };
+  const anchor = { x: 538, y: 284 };
+  const restPos = { x: 538, y: 440 };
 
-  const [handlePos, setHandlePos] = useState({ x: 536, y: 440 });
-  const [curveMid, setCurveMid] = useState({ x: 536, y: 363 });
+  const [handlePos, setHandlePos] = useState({ x: 538, y: 440 });
+  const [curveMid, setCurveMid] = useState({ x: 538, y: 362 });
 
-  const posRef = useRef({ x: 536, y: 440 });
+  const posRef = useRef({ x: 538, y: 440 });
   const velRef = useRef({ vx: 0, vy: 0 });
   const animFrameRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
@@ -42,12 +44,12 @@ export default function LampPullRig({
     isLitRef.current = isLit;
   }, [isLit]);
 
-  // 阻尼回弹振荡
+  // 阻尼回弹弹簧振荡算法
   const startSpringAnimation = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
 
-    const k = 0.28;
-    const damping = 0.85;
+    const k = 0.32;
+    const damping = 0.82;
 
     const step = () => {
       if (isDraggingRef.current) return;
@@ -65,17 +67,17 @@ export default function LampPullRig({
       posRef.current.y += velRef.current.vy;
 
       const midX =
-        anchor.x + (posRef.current.x - anchor.x) * 0.48 + velRef.current.vx * 1.5;
+        anchor.x + (posRef.current.x - anchor.x) * 0.46 + velRef.current.vx * 1.6;
       const midY = anchor.y + (posRef.current.y - anchor.y) * 0.52;
 
       setHandlePos({ x: posRef.current.x, y: posRef.current.y });
       setCurveMid({ x: midX, y: midY });
 
       if (
-        Math.abs(dx) < 0.2 &&
-        Math.abs(dy) < 0.2 &&
-        Math.abs(velRef.current.vx) < 0.2 &&
-        Math.abs(velRef.current.vy) < 0.2
+        Math.abs(dx) < 0.15 &&
+        Math.abs(dy) < 0.15 &&
+        Math.abs(velRef.current.vx) < 0.15 &&
+        Math.abs(velRef.current.vy) < 0.15
       ) {
         posRef.current.x = restPos.x;
         posRef.current.y = restPos.y;
@@ -92,16 +94,16 @@ export default function LampPullRig({
     animFrameRef.current = requestAnimationFrame(step);
   }, []);
 
-  // 帷幕向上卷起升起，自动进入
-  const triggerCurtainLift = useCallback(() => {
-    setCurtainPos('up');
+  // 触发幕布平滑淡化退出 (Fade Out)
+  const triggerCurtainFadeOut = useCallback(() => {
+    setCurtainVisible(false);
     soundManager.playClick();
     setTimeout(() => {
       onClose();
-    }, 950);
+    }, 750);
   }, [onClose]);
 
-  // 点亮 / 熄灭吊灯并在点亮后自动升起帷幕
+  // 点亮吊灯，经历通电微闪后柔和平滑淡化退场
   const toggleLamp = useCallback(() => {
     const nextLit = !isLitRef.current;
     setIsLit(nextLit);
@@ -109,56 +111,56 @@ export default function LampPullRig({
     if (onToggleLight) onToggleLight(nextLit);
 
     if (nextLit) {
-      // 3段高频电弧爆闪
-      setFlickerLevel(1.2);
-      setTimeout(() => setFlickerLevel(0.25), 45);
-      setTimeout(() => setFlickerLevel(1.15), 90);
-      setTimeout(() => setFlickerLevel(0.65), 140);
-      setTimeout(() => setFlickerLevel(1.0), 200);
+      // 自然电弧微闪
+      setFlickerLevel(1.15);
+      setTimeout(() => setFlickerLevel(0.3), 50);
+      setTimeout(() => setFlickerLevel(1.1), 100);
+      setTimeout(() => setFlickerLevel(0.7), 150);
+      setTimeout(() => setFlickerLevel(1.0), 220);
 
-      // 点亮约 380ms 稳定后，自动如大剧场幕布般向上优雅拉起，自动进入！
+      // 点亮稳定 360ms 后，全场以柔和透明度淡化消失，自然进入主页
       setTimeout(() => {
-        triggerCurtainLift();
-      }, 380);
+        triggerCurtainFadeOut();
+      }, 360);
     } else {
       setFlickerLevel(0);
     }
-  }, [onToggleLight, triggerCurtainLift]);
+  }, [onToggleLight, triggerCurtainFadeOut]);
 
-  // 监听外部 isOpen 变化（例如从右上角常驻吊灯拉动关灯降幕）
+  // 监听外部 isOpen 变化（例如从右上角微型吊灯关灯降幕）
   useEffect(() => {
     if (isOpen) {
-      // 帷幕平滑自上方滑落覆盖全屏
-      setCurtainPos('down');
+      // 幕布平滑淡入显现 (Fade In)
+      setCurtainVisible(true);
       setIsLit(false);
       setFlickerLevel(0);
     } else {
-      setCurtainPos('up');
+      setCurtainVisible(false);
     }
   }, [isOpen]);
 
-  // 键盘快捷键监听
+  // 键盘快捷监听
   useEffect(() => {
-    if (!isOpen) return;
+    if (!curtainVisible) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        triggerCurtainLift();
+        triggerCurtainFadeOut();
       } else if (e.key === "Enter" || e.key === " ") {
         if (!isLitRef.current) {
           toggleLamp();
           startSpringAnimation();
         } else {
-          triggerCurtainLift();
+          triggerCurtainFadeOut();
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, triggerCurtainLift, toggleLamp, startSpringAnimation]);
+  }, [curtainVisible, triggerCurtainFadeOut, toggleLamp, startSpringAnimation]);
 
   const getSvgPoint = (clientX: number, clientY: number) => {
-    if (!svgRef.current) return { x: 536, y: 440 };
+    if (!svgRef.current) return { x: 538, y: 440 };
     const pt = svgRef.current.createSVGPoint();
     pt.x = clientX;
     pt.y = clientY;
@@ -166,7 +168,7 @@ export default function LampPullRig({
     if (ctm) {
       return pt.matrixTransform(ctm.inverse());
     }
-    return { x: 536, y: 440 };
+    return { x: 538, y: 440 };
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -189,7 +191,7 @@ export default function LampPullRig({
       let targetY = current.y + startOffset.y;
 
       const maxRadius = 140;
-      const maxDy = 120;
+      const maxDy = 130;
 
       const dx = targetX - restPos.x;
       const dy = Math.max(0, Math.min(maxDy, targetY - restPos.y));
@@ -200,7 +202,7 @@ export default function LampPullRig({
       posRef.current.x = clampedX;
       posRef.current.y = clampedY;
 
-      const midX = anchor.x + (clampedX - anchor.x) * 0.5 + (clampedX - restPos.x) * 0.15;
+      const midX = anchor.x + (clampedX - anchor.x) * 0.48 + (clampedX - restPos.x) * 0.15;
       const midY = anchor.y + (clampedY - anchor.y) * 0.5;
 
       setHandlePos({ x: clampedX, y: clampedY });
@@ -219,7 +221,7 @@ export default function LampPullRig({
 
       if (pullDistance >= 22 || pullDistance <= 6) {
         toggleLamp();
-        velRef.current.vy = -Math.max(22, pullDistance * 0.8);
+        velRef.current.vy = -Math.max(22, pullDistance * 0.85);
         velRef.current.vx = (posRef.current.x - anchor.x) * -0.4;
       } else {
         velRef.current.vy = -pullDistance * 0.5;
@@ -238,118 +240,149 @@ export default function LampPullRig({
     };
   }, []);
 
-  const beads = [0.1, 0.19, 0.28, 0.37, 0.46, 0.55, 0.64, 0.73, 0.82, 0.91].map(
-    (t) => {
-      const bx =
-        (1 - t) * (1 - t) * anchor.x +
-        2 * (1 - t) * t * curveMid.x +
-        t * t * handlePos.x;
-      const by =
-        (1 - t) * (1 - t) * anchor.y +
-        2 * (1 - t) * t * curveMid.y +
-        t * t * handlePos.y;
-      return { bx, by };
-    }
-  );
+  // 18颗紧密精致金属微圆珠链 (Jewelry Ball Chain)
+  const beadCount = 18;
+  const beads = Array.from({ length: beadCount }).map((_, idx) => {
+    const t = (idx + 1) / (beadCount + 1);
+    const bx =
+      (1 - t) * (1 - t) * anchor.x +
+      2 * (1 - t) * t * curveMid.x +
+      t * t * handlePos.x;
+    const by =
+      (1 - t) * (1 - t) * anchor.y +
+      2 * (1 - t) * t * curveMid.y +
+      t * t * handlePos.y;
+    return { bx, by };
+  });
 
   const pullThresholdReached = handlePos.y - restPos.y >= 22;
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center select-none overflow-hidden transition-transform duration-900 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-        curtainPos === 'up' ? "-translate-y-full pointer-events-none" : "translate-y-0 pointer-events-auto"
+      className={`fixed inset-0 z-50 flex items-center justify-center select-none overflow-hidden transition-all duration-750 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        curtainVisible
+          ? "opacity-100 scale-100 pointer-events-auto backdrop-blur-none"
+          : "opacity-0 scale-[1.03] pointer-events-none invisible"
       }`}
       style={{
         backgroundColor: "#05070F",
         background: isLit
-          ? "radial-gradient(ellipse 95% 75% at 50% 25%, #0A162B 0%, #05070F 85%)"
-          : "radial-gradient(ellipse 65% 55% at 50% 20%, #070B17 0%, #05070F 80%)",
-        boxShadow: "0 40px 100px rgba(0,0,0,0.95), 0 15px 35px rgba(92,242,196,0.18)",
-        willChange: "transform",
+          ? "radial-gradient(ellipse 95% 75% at 50% 28%, #0B162B 0%, #05070F 85%)"
+          : "radial-gradient(ellipse 70% 60% at 50% 24%, #070B16 0%, #05070F 80%)",
+        willChange: "opacity, transform",
       }}
     >
       {/* 顶部工具栏 (静音与跳过按键) */}
-      <div className="absolute top-6 right-6 z-20 flex items-center gap-3">
+      <div className="absolute top-6 right-6 sm:top-8 sm:right-8 z-30 flex items-center gap-3">
         <button
           onClick={() => {
             const next = !isMuted;
             setIsMuted(next);
             soundManager.setMuted(next);
           }}
-          className="p-2.5 rounded-full border border-[#1F2A4D] bg-[#0A0E1A]/80 text-[#9FB0D0] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/60 transition-all backdrop-blur-sm cursor-pointer"
+          className="p-2.5 rounded-full border border-[#1E2945] bg-[#0A0F1D]/80 text-[#8E9EB8] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/50 transition-all backdrop-blur-md cursor-pointer shadow-sm"
           title={isMuted ? "开启音效" : "静音"}
         >
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
 
         <button
-          onClick={triggerCurtainLift}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-[#1F2A4D] bg-[#0A0E1A]/80 text-[#9FB0D0] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/60 text-xs font-mono transition-all backdrop-blur-sm cursor-pointer"
-          title="跳过并升起帷幕"
+          onClick={triggerCurtainFadeOut}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#1E2945] bg-[#0A0F1D]/80 text-[#8E9EB8] hover:text-[#5CF2C4] hover:border-[#5CF2C4]/50 text-xs font-mono transition-all backdrop-blur-md cursor-pointer shadow-sm"
+          title="跳过并步入工坊"
         >
           <span>进入工坊</span>
           <ArrowUp className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* 物理吊灯主 SVG 画布 */}
+      {/* 高级物理吊灯与光学系统 SVG 画布 */}
       <svg
         ref={svgRef}
         viewBox="0 0 1000 900"
-        className="w-full h-full max-w-5xl max-h-[90vh] pointer-events-none"
+        className="w-full h-full max-w-5xl max-h-[92vh] pointer-events-none"
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>
-          {/* 大范围发光径向滤镜 */}
+          {/* 1. 核心高光热点渐变 (Pure White to Phosphor) */}
           <radialGradient
-            id="lampGlowBeam"
+            id="coreHotspot"
             cx="50%"
-            cy="30%"
-            r="60%"
+            cy="32%"
+            r="50%"
+          >
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.98 * flickerLevel} />
+            <stop offset="35%" stopColor="#7DF9D2" stopOpacity={0.9 * flickerLevel} />
+            <stop offset="70%" stopColor="#5CF2C4" stopOpacity={0.45 * flickerLevel} />
+            <stop offset="100%" stopColor="#5CF2C4" stopOpacity="0" />
+          </radialGradient>
+
+          {/* 2. 空间丁达尔体积羽化光锥 (Soft Atmospheric Cone Beam) */}
+          <radialGradient
+            id="volumetricAtmosphere"
+            cx="50%"
+            cy="15%"
+            r="85%"
             fx="50%"
             fy="25%"
           >
-            <stop offset="0%" stopColor="#5CF2C4" stopOpacity={0.85 * flickerLevel} />
-            <stop offset="25%" stopColor="#2AE2B1" stopOpacity={0.45 * flickerLevel} />
-            <stop offset="55%" stopColor="#7E57C2" stopOpacity={0.25 * flickerLevel} />
-            <stop offset="85%" stopColor="#0B1226" stopOpacity={0.08 * flickerLevel} />
+            <stop offset="0%" stopColor="#5CF2C4" stopOpacity={0.75 * flickerLevel} />
+            <stop offset="20%" stopColor="#3BDDB0" stopOpacity={0.42 * flickerLevel} />
+            <stop offset="50%" stopColor="#19333F" stopOpacity={0.18 * flickerLevel} />
+            <stop offset="80%" stopColor="#0B1324" stopOpacity={0.06 * flickerLevel} />
             <stop offset="100%" stopColor="#05070F" stopOpacity="0" />
           </radialGradient>
 
-          {/* 聚光圆锥光束 */}
-          <linearGradient id="coneBeam" x1="50%" y1="0%" x2="50%" y2="100%">
-            <stop offset="0%" stopColor="#5CF2C4" stopOpacity={0.55 * flickerLevel} />
-            <stop offset="60%" stopColor="#5CF2C4" stopOpacity={0.15 * flickerLevel} />
-            <stop offset="100%" stopColor="#5CF2C4" stopOpacity="0" />
-          </linearGradient>
-
-          {/* 灯罩金属渐变 */}
-          <linearGradient id="shadeMetal" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#121828" />
-            <stop offset="35%" stopColor="#253554" />
-            <stop offset="50%" stopColor="#3C527D" />
-            <stop offset="65%" stopColor="#253554" />
-            <stop offset="100%" stopColor="#0E1320" />
-          </linearGradient>
-
-          {/* 铜黄金属高光渐变 */}
-          <linearGradient id="brassGlint" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#F5D061" />
-            <stop offset="50%" stopColor="#E5B233" />
-            <stop offset="100%" stopColor="#8A6310" />
-          </linearGradient>
-
-          {/* 拉线拉坠渐变 */}
-          <radialGradient id="acornShine" cx="35%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="40%" stopColor="#5CF2C4" />
-            <stop offset="100%" stopColor="#1B8065" />
+          {/* 3. 地面空间柔和漫反射光斑 (Floor Ambient Bounce Field) */}
+          <radialGradient
+            id="floorBounceGlow"
+            cx="50%"
+            cy="50%"
+            r="50%"
+          >
+            <stop offset="0%" stopColor="#5CF2C4" stopOpacity={0.25 * flickerLevel} />
+            <stop offset="45%" stopColor="#2AE2B1" stopOpacity={0.1 * flickerLevel} />
+            <stop offset="80%" stopColor="#05070F" stopOpacity={0.02 * flickerLevel} />
+            <stop offset="100%" stopColor="#05070F" stopOpacity="0" />
           </radialGradient>
 
-          {/* 漫反射光晕滤镜 */}
-          <filter id="bloomSoft" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur1" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation="28" result="blur2" />
+          {/* 4. 灯罩黑曜石哑光微金属质感 (Obsidian Matte Dome) */}
+          <linearGradient id="obsidianMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#0D111A" />
+            <stop offset="25%" stopColor="#1E283C" />
+            <stop offset="50%" stopColor="#314264" />
+            <stop offset="75%" stopColor="#1E283C" />
+            <stop offset="100%" stopColor="#0A0E17" />
+          </linearGradient>
+
+          {/* 5. 精密拉丝黄铜领圈 (Brushed Brass Collar) */}
+          <linearGradient id="brushedBrass" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#E6C875" />
+            <stop offset="35%" stopColor="#C9A043" />
+            <stop offset="70%" stopColor="#F5DF98" />
+            <stop offset="100%" stopColor="#7E5F1E" />
+          </linearGradient>
+
+          {/* 6. 拉坠圆柱钛金属高光 (Machined Titanium Capsule) */}
+          <linearGradient id="machinedCapsule" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#1E273A" />
+            <stop offset="40%" stopColor="#4A5F8A" />
+            <stop offset="60%" stopColor="#7B92C2" />
+            <stop offset="85%" stopColor="#304163" />
+            <stop offset="100%" stopColor="#141B28" />
+          </linearGradient>
+
+          {/* 7. 金属球链单珠高光 (Chrome Bead Shine) */}
+          <radialGradient id="chromeBead" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="45%" stopColor="#9FB4D9" />
+            <stop offset="100%" stopColor="#25324D" />
+          </radialGradient>
+
+          {/* 漫反射光学柔光滤镜 */}
+          <filter id="softDiffusion" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur1" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="36" result="blur2" />
             <feMerge>
               <feMergeNode in="blur2" />
               <feMergeNode in="blur1" />
@@ -358,163 +391,227 @@ export default function LampPullRig({
           </filter>
         </defs>
 
-        {/* 1. 广域背景环境辉光池 */}
+        {/* --- [A] 空间光学漫射与光柱系统 (零生硬边缘，平滑柔边) --- */}
         {isLit && (
-          <g className="transition-opacity duration-300">
+          <g className="transition-opacity duration-500 ease-out">
+            {/* 广域空气光池 */}
             <ellipse
               cx="500"
               cy="340"
-              rx="460"
-              ry="380"
-              fill="url(#lampGlowBeam)"
-              filter="url(#bloomSoft)"
+              rx="480"
+              ry="390"
+              fill="url(#volumetricAtmosphere)"
+              filter="url(#softDiffusion)"
             />
-            <polygon
-              points="450,260 550,260 820,880 180,880"
-              fill="url(#coneBeam)"
+
+            {/* 空间发散柔光束 (采用平滑贝塞尔曲线边界，杜绝三角形切角) */}
+            <path
+              d="M440,250 C440,250 220,860 160,880 C260,895 740,895 840,880 C780,860 560,250 560,250 Z"
+              fill="url(#volumetricAtmosphere)"
+              filter="url(#softDiffusion)"
+              opacity={0.85 * flickerLevel}
+            />
+
+            {/* 地面漫反射光池 */}
+            <ellipse
+              cx="500"
+              cy="840"
+              rx="360"
+              ry="65"
+              fill="url(#floorBounceGlow)"
+              filter="url(#softDiffusion)"
             />
           </g>
         )}
 
-        {/* 2. 顶部天花板基座与悬垂电缆 */}
+        {/* --- [B] 天花板悬吊基座与电缆 --- */}
         <g id="ceilingFixture">
-          <ellipse cx="500" cy="0" rx="42" ry="12" fill="#1C273E" stroke="#3A4D73" strokeWidth="1" />
+          {/* 天花板磨砂基座 */}
+          <ellipse cx="500" cy="0" rx="36" ry="10" fill="#141B2B" stroke="#2D3B57" strokeWidth="1.2" />
+          {/* 哑光精密电缆 */}
           <line
             x1="500"
             y1="0"
             x2="500"
-            y2="170"
-            stroke="#121826"
-            strokeWidth="3.5"
+            y2="175"
+            stroke="#0A0D14"
+            strokeWidth="3.2"
             strokeLinecap="round"
           />
           <line
-            x1="499"
+            x1="499.2"
             y1="0"
-            x2="499"
-            y2="170"
-            stroke="#2B3C5E"
-            strokeWidth="1"
+            x2="499.2"
+            y2="175"
+            stroke="#26344F"
+            strokeWidth="0.8"
           />
         </g>
 
-        {/* 3. 吊灯金属主体结构 (复古工业工坊吊灯) */}
-        <g id="lampStructure">
-          <rect x="492" y="165" width="16" height="22" rx="3" fill="url(#brassGlint)" />
+        {/* --- [C] 极简包豪斯工业工坊吊灯主体 --- */}
+        <g id="atelierLampshade">
+          {/* 纯铜滚花固定套筒 */}
+          <rect x="493" y="168" width="14" height="20" rx="2.5" fill="url(#brushedBrass)" stroke="#523F11" strokeWidth="0.8" />
+          <line x1="493" y1="174" x2="507" y2="174" stroke="#4A380E" strokeWidth="0.8" />
+          <line x1="493" y1="180" x2="507" y2="180" stroke="#4A380E" strokeWidth="0.8" />
+
+          {/* 锥台黑曜石流线灯罩 */}
           <polygon
-            points="500,185 410,250 590,250"
-            fill="url(#shadeMetal)"
-            stroke="#3C527D"
-            strokeWidth="1.5"
+            points="500,186 415,250 585,250"
+            fill="url(#obsidianMetal)"
+            stroke="#2C3D5C"
+            strokeWidth="1.2"
           />
+
+          {/* 灯罩底部精密微金属边框 */}
           <ellipse
             cx="500"
             cy="250"
-            rx="90"
-            ry="18"
-            fill="#121828"
-            stroke="#5CF2C4"
-            strokeWidth={isLit ? "2" : "0.5"}
-            strokeOpacity={isLit ? "0.9" : "0.3"}
+            rx="85"
+            ry="16"
+            fill="#101522"
+            stroke={isLit ? "#5CF2C4" : "#2E3F61"}
+            strokeWidth={isLit ? "1.6" : "0.8"}
+            strokeOpacity={isLit ? 0.9 : 0.4}
           />
+
+          {/* 底部内嵌磨砂发光透镜 (Frosted Lens) */}
           <ellipse
             cx="500"
-            cy="254"
-            rx="82"
-            ry="12"
-            fill={isLit ? "#5CF2C4" : "#0A0F1D"}
-            fillOpacity={isLit ? 0.9 * flickerLevel : 0.6}
-            filter={isLit ? "url(#bloomSoft)" : undefined}
+            cy="252"
+            rx="78"
+            ry="11"
+            fill={isLit ? "url(#coreHotspot)" : "#0B0E17"}
+            filter={isLit ? "url(#softDiffusion)" : undefined}
           />
-          <path
-            d="M486 250 C486 270 492 284 500 284 C508 284 514 270 514 250 Z"
-            fill={isLit ? "#FFFFFF" : "#1B2438"}
-            fillOpacity={isLit ? 0.95 * flickerLevel : 0.7}
-            stroke={isLit ? "#5CF2C4" : "#303F5E"}
-            strokeWidth="1"
-          />
+
+          {/* 点亮时的纯白晶体核心热点 (Ultra Hotspot) */}
           {isLit && (
-            <path
-              d="M495 260 Q500 252 505 260"
-              stroke="#FFF"
-              strokeWidth="2.5"
-              fill="none"
-              strokeLinecap="round"
-              filter="url(#bloomSoft)"
+            <ellipse
+              cx="500"
+              cy="252"
+              rx="24"
+              ry="5.5"
+              fill="#FFFFFF"
+              fillOpacity={0.96 * flickerLevel}
+              filter="url(#softDiffusion)"
             />
           )}
-          <circle cx="536" cy="286" r="4.5" fill="url(#brassGlint)" stroke="#4A3405" strokeWidth="1" />
+
+          {/* 拉绳悬挂点微型黄铜小吊耳 (Brass Anchor Eyelet) */}
+          <circle cx="538" cy="284" r="3.6" fill="url(#brushedBrass)" stroke="#4A380E" strokeWidth="0.8" />
+          <circle cx="538" cy="284" r="1.4" fill="#0A0E17" />
         </g>
 
-        {/* 4. 物理交互拉绳体系 */}
-        <g id="pullCordSystem">
+        {/* --- [D] 高精度微型金属圆珠链与精密胶囊拉坠 --- */}
+        <g id="precisionCordRig">
+          {/* 珠链底层导向纤细柔光线 */}
           <path
             d={`M ${anchor.x} ${anchor.y} Q ${curveMid.x} ${curveMid.y} ${handlePos.x} ${handlePos.y}`}
             fill="none"
-            stroke={isLit ? "#7DF9D2" : "#9FB0D0"}
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeDasharray="4 2"
+            stroke={isLit ? "#5CF2C4" : "#4A5D80"}
+            strokeWidth="0.8"
+            strokeOpacity={isLit ? 0.7 : 0.3}
+            strokeDasharray="2 1"
           />
+
+          {/* 18 颗微型精密金属球 (Jewelry Ball Chain) */}
           {beads.map((b, i) => (
-            <circle
-              key={i}
-              cx={b.bx}
-              cy={b.by}
-              r={1.8}
-              fill={isLit ? "#5CF2C4" : "#6E80A4"}
-              opacity="0.85"
-            />
+            <g key={i}>
+              <circle
+                cx={b.bx}
+                cy={b.by}
+                r={1.8}
+                fill="url(#chromeBead)"
+                stroke="#1B2438"
+                strokeWidth="0.5"
+              />
+              {/* 微金属高光点 */}
+              <circle
+                cx={b.bx - 0.5}
+                cy={b.by - 0.5}
+                r={0.6}
+                fill="#FFFFFF"
+                opacity={0.8}
+              />
+            </g>
           ))}
+
+          {/* --- 末端精密金属胶囊拉坠 (Precision Capsule Pendant) --- */}
           <g
             transform={`translate(${handlePos.x}, ${handlePos.y})`}
             className="cursor-grab active:cursor-grabbing pointer-events-auto"
             onPointerDown={handlePointerDown}
+            onMouseEnter={() => setIsHoveringBead(true)}
+            onMouseLeave={() => setIsHoveringBead(false)}
           >
+            {/* 扩大手势触摸热区 (48px 圆形热区) */}
             <circle
               cx="0"
-              cy="0"
-              r="34"
+              cy="8"
+              r="24"
               fill="transparent"
               className="cursor-grab active:cursor-grabbing"
             />
+
+            {/* 达到拉动阈值时的环形发光指示环 */}
             {pullThresholdReached && (
               <circle
                 cx="0"
-                cy="0"
+                cy="8"
                 r="18"
                 fill="none"
                 stroke="#5CF2C4"
-                strokeWidth="1.5"
-                strokeDasharray="3 2"
+                strokeWidth="1.2"
+                strokeDasharray="4 2"
                 className="animate-spin"
-                style={{ animationDuration: "3s" }}
+                style={{ animationDuration: "2.5s" }}
               />
             )}
-            <ellipse
-              cx="0"
-              cy="0"
-              rx="6"
-              ry="11"
-              fill="url(#acornShine)"
-              stroke="#135242"
-              strokeWidth="1"
-            />
-            <ellipse cx="-1.5" cy="-3" rx="1.5" ry="3.5" fill="#FFFFFF" opacity="0.75" />
-            <circle cx="0" cy="11" r="2.2" fill="url(#brassGlint)" />
 
-            {/* 拉拽状态文字提示 */}
+            {/* 顶部纯铜微连接环 */}
+            <circle cx="0" cy="-2" r="2.2" fill="url(#brushedBrass)" stroke="#4A380E" strokeWidth="0.6" />
+
+            {/* 圆柱金属胶囊外壳 */}
+            <rect
+              x="-4.2"
+              y="0"
+              width="8.4"
+              height="18"
+              rx="4.2"
+              fill="url(#machinedCapsule)"
+              stroke={isHoveringBead || pullThresholdReached ? "#5CF2C4" : "#2B3C5E"}
+              strokeWidth="0.9"
+              className="transition-colors duration-200"
+              style={{
+                filter: isHoveringBead
+                  ? "drop-shadow(0 0 6px rgba(92,242,196,0.6))"
+                  : "none",
+              }}
+            />
+
+            {/* 胶囊中间精密拉丝环带 */}
+            <line x1="-3.8" y1="9" x2="3.8" y2="9" stroke="#101524" strokeWidth="0.8" />
+            <line x1="-3.8" y1="10" x2="3.8" y2="10" stroke="url(#brushedBrass)" strokeWidth="0.6" />
+
+            {/* 胶囊左上侧微高光切线 */}
+            <line x1="-2" y1="2" x2="-2" y2="15" stroke="#FFFFFF" strokeWidth="0.6" strokeOpacity="0.6" />
+
+            {/* 底部微小金属圆珠 */}
+            <circle cx="0" cy="18" r="1.6" fill="url(#brushedBrass)" stroke="#4A380E" strokeWidth="0.5" />
+
+            {/* 拖拽交互状态文字指示标签 */}
             {isDragging ? (
               <g className="transition-opacity duration-150">
                 <rect
-                  x="-75"
+                  x="-68"
                   y="-26"
-                  width="150"
+                  width="136"
                   height="22"
                   rx="11"
                   fill="#0A0E1A"
-                  fillOpacity="0.9"
-                  stroke={pullThresholdReached ? "#5CF2C4" : "#2E3F66"}
+                  fillOpacity="0.92"
+                  stroke={pullThresholdReached ? "#5CF2C4" : "#273656"}
                   strokeWidth="1.2"
                 />
                 <text
@@ -526,32 +623,33 @@ export default function LampPullRig({
                   fontFamily="monospace"
                   fontWeight="bold"
                 >
-                  {pullThresholdReached ? "松手点亮 ⚡" : "继续向下拉动..."}
+                  {pullThresholdReached ? "松手点亮 · IGNITE" : "继续下拉拉绳..."}
                 </text>
               </g>
             ) : (
-              <g className="animate-bounce" style={{ animationDuration: "2s" }}>
+              <g className="animate-bounce" style={{ animationDuration: "2.2s" }}>
                 <rect
-                  x="-8"
-                  y="-14"
-                  width="110"
-                  height="26"
-                  rx="13"
+                  x="-42"
+                  y="28"
+                  width="84"
+                  height="20"
+                  rx="10"
                   fill="#0A0E1A"
-                  fillOpacity="0.85"
-                  stroke="#1F2A4D"
-                  strokeWidth="1"
+                  fillOpacity="0.88"
+                  stroke="#1E2A48"
+                  strokeWidth="0.9"
                 />
                 <text
-                  x="6"
-                  y="4"
+                  x="0"
+                  y="41"
+                  textAnchor="middle"
                   fill="#5CF2C4"
-                  fontSize="10"
+                  fontSize="9.5"
                   fontFamily="monospace"
                   fontWeight="bold"
-                  letterSpacing="0.1em"
+                  letterSpacing="0.08em"
                 >
-                  {isLit ? "PULL TO OFF ↓" : "PULL TO ON ↓"}
+                  PULL DOWN ↓
                 </text>
               </g>
             )}
@@ -559,18 +657,12 @@ export default function LampPullRig({
         </g>
       </svg>
 
-      {/* 底部引导文案 */}
+      {/* 底部引导文案 (极度克制高级) */}
       <div className="absolute bottom-10 left-0 right-0 z-20 flex flex-col items-center justify-center text-center px-4 pointer-events-none">
-        {curtainPos === 'up' ? (
+        {isLit ? (
           <div className="flex flex-col items-center animate-pulse">
             <p className="text-xs font-mono text-[#5CF2C4] tracking-widest uppercase">
-              ✦ 帷幕升起 · 自动步入工坊 ✦
-            </p>
-          </div>
-        ) : isLit ? (
-          <div className="flex flex-col items-center">
-            <p className="text-xs font-mono text-[#5CF2C4] tracking-widest uppercase">
-              ✦ Atelier Illuminated · 正在为你揭幕 ✦
+              ✦ ATELIER ILLUMINATED · 正在步入工坊 ✦
             </p>
           </div>
         ) : (
@@ -579,14 +671,11 @@ export default function LampPullRig({
               CIOOOUL ATELIER
             </h2>
             <p className="text-xs font-mono text-[#7D88AA]">
-              按住鼠标下拉拉绳点亮 · 松手自动升起帷幕
+              下拉金属珠链点亮工坊 · 支持 Enter / 空格键
             </p>
           </div>
         )}
       </div>
-
-      {/* 帷幕底部金属质感饰边条 (提升卷起时的物理重量感) */}
-      <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-[#5CF2C4]/40 to-transparent border-b-2 border-[#5CF2C4]/60 pointer-events-none" />
     </div>
   );
 }
