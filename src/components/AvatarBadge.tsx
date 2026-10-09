@@ -4,33 +4,32 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { portfolioData } from '@/data/portfolioData';
 import { soundManager } from '@/utils/audio';
-import { Check, Copy, Sparkles, MapPin, Mail, MessageSquare, RefreshCw } from 'lucide-react';
+import { copyToClipboard } from '@/utils/clipboard';
+import { Check, Sparkles, MapPin, Mail, MessageSquare } from 'lucide-react';
+import TiltCard from './TiltCard';
 
 export const AvatarBadge: React.FC = () => {
-  const [useAltPhoto, setUseAltPhoto] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const currentPhoto = useAltPhoto
-    ? portfolioData.personal.avatarAlt
-    : portfolioData.personal.avatar;
-
-  const handleTogglePhoto = () => {
+  const handleCopy = async (text: string, key: string) => {
     soundManager.playClick();
-    setUseAltPhoto(!useAltPhoto);
-  };
-
-  const handleCopy = (text: string, key: string) => {
-    soundManager.playClick();
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    }
   };
 
   return (
-    <div className="relative group/card w-full max-w-[340px] sm:max-w-[380px] mx-auto lg:ml-auto">
-      {/* 1. 背景赛博极光全息光晕 (双主题自适应) */}
+    <TiltCard
+      maxTilt={6}
+      scale={1.02}
+      glare={true}
+      className="relative group/card w-full max-w-[340px] sm:max-w-[380px] mx-auto lg:ml-auto"
+    >
+      {/* 1. 背景赛博极光全息光晕 */}
       <div
-        className="absolute -inset-1.5 rounded-3xl blur-2xl opacity-40 group-hover/card:opacity-75 transition duration-700 pointer-events-none"
+        className="absolute -inset-1.5 rounded-3xl blur-2xl opacity-40 group-hover/card:opacity-70 transition duration-700 pointer-events-none"
         style={{
           background:
             'radial-gradient(circle at 50% 30%, var(--phosphor) 0%, var(--violet) 50%, transparent 80%)',
@@ -38,9 +37,9 @@ export const AvatarBadge: React.FC = () => {
       />
 
       {/* 2. 核心工坊磨砂卡片主体 */}
-      <div className="relative rounded-3xl border border-[var(--border-line)] bg-[var(--bg-surface)] p-6 sm:p-7 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-[var(--phosphor)]">
+      <div className="relative rounded-3xl border border-[var(--border-line)] bg-[var(--bg-surface)] p-6 sm:p-7 shadow-2xl backdrop-blur-xl transition-colors duration-300 hover:border-[var(--phosphor)]">
         
-        {/* 卡片顶栏：终端系统状态 */}
+        {/* 卡片顶栏：系统在线状态 */}
         <div className="flex items-center justify-between pb-4 mb-5 border-b border-[var(--border-line)]">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
@@ -55,27 +54,17 @@ export const AvatarBadge: React.FC = () => {
             </span>
           </div>
 
-          {/* 视角切换按钮 (正面肖像 / 胶片远景) */}
-          <button
-            onClick={handleTogglePhoto}
-            title="切换头像视角 (肖像 / 胶片远景)"
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono text-[var(--text-secondary)] hover:text-[var(--phosphor)] bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-2.5 h-2.5" />
-            <span>{useAltPhoto ? '肖像' : '远景'}</span>
-          </button>
+          <div className="px-2 py-0.5 rounded-full text-[10px] font-mono text-[var(--phosphor)] bg-[var(--phosphor-dim)] border border-[var(--phosphor-dim)]">
+            ATELIER
+          </div>
         </div>
 
-        {/* 头像展示核心视区 */}
+        {/* 头像展示核心视区 (唯一专属肖像) */}
         <div className="relative flex flex-col items-center text-center">
-          <div
-            onClick={handleTogglePhoto}
-            className="relative cursor-pointer group/avatar p-1.5 rounded-full"
-            title="点击切换头像视角"
-          >
+          <div className="relative p-1.5 rounded-full">
             {/* 头像呼吸双层光环 */}
             <div
-              className="absolute inset-0 rounded-full blur-md opacity-50 group-hover/avatar:opacity-100 transition-opacity duration-500"
+              className="absolute inset-0 rounded-full blur-md opacity-60 group-hover/card:opacity-100 transition-opacity duration-500"
               style={{
                 background:
                   'conic-gradient(from 180deg at 50% 50%, var(--phosphor) 0deg, var(--violet) 180deg, var(--phosphor) 360deg)',
@@ -83,18 +72,18 @@ export const AvatarBadge: React.FC = () => {
             />
 
             {/* 头像实体圆形容器 */}
-            <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden border-2 border-[var(--phosphor)] bg-[#070a13] shadow-inner transition-transform duration-500 group-hover/avatar:scale-105">
+            <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden border-2 border-[var(--phosphor)] bg-[#070a13] shadow-inner">
               <Image
-                src={currentPhoto}
+                src="/avatar_portrait.jpg"
                 alt={portfolioData.personal.name}
                 fill
                 sizes="(max-width: 768px) 144px, 160px"
-                className="object-cover object-top transition-transform duration-700 ease-out group-hover/avatar:scale-110"
+                className="object-cover object-center transition-transform duration-700 ease-out group-hover/card:scale-105"
                 priority
               />
 
-              {/* 胶片颗粒感遮罩 */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+              {/* 质感微渐变遮罩 */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
             </div>
 
             {/* 右下角极客徽标角标 */}
@@ -107,7 +96,7 @@ export const AvatarBadge: React.FC = () => {
           <div className="mt-4">
             <h3 className="text-xl font-bold font-sans tracking-tight text-[var(--text-primary)] flex items-center justify-center gap-2">
               <span>{portfolioData.personal.name}</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--phosphor-subtle)] text-[var(--phosphor)] border border-[var(--phosphor-muted)] font-semibold">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--phosphor-dim)] text-[var(--phosphor)] border border-[var(--phosphor-dim)] font-semibold">
                 PRO
               </span>
             </h3>
@@ -126,6 +115,7 @@ export const AvatarBadge: React.FC = () => {
             <button
               onClick={() => handleCopy(portfolioData.personal.wechat, 'wechat')}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-mono bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer shadow-xs group/btn"
+              title="点击复制微信号"
             >
               {copiedKey === 'wechat' ? (
                 <>
@@ -153,7 +143,7 @@ export const AvatarBadge: React.FC = () => {
         </div>
 
       </div>
-    </div>
+    </TiltCard>
   );
 };
 

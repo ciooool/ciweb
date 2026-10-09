@@ -138,7 +138,7 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
           {/* 5. 立即联络 CTA 胶囊按钮 */}
           <a
             href="#contact"
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-theme-phosphor text-[#070a13] text-xs font-mono font-bold hover:opacity-90 hover:shadow-[0_0_15px_var(--phosphor)] transition-all ml-1 shadow-sm"
+            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-theme-phosphor text-[#070a13] text-xs font-mono font-bold hover:opacity-90 hover:shadow-[0_0_15px_var(--phosphor)] transition-all ml-1 shadow-sm cursor-pointer"
           >
             <span>联络</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
           {/* 移动端汉堡菜单 */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl border border-theme-line text-theme-secondary hover:text-theme-primary transition-colors ml-1"
+            className="md:hidden p-2 rounded-xl border border-theme-line text-theme-secondary hover:text-theme-primary transition-colors ml-1 cursor-pointer"
             aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? (
@@ -167,7 +167,7 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
               key={link.href}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-theme-secondary hover:text-theme-phosphor py-1 transition-colors"
+              className="block text-theme-secondary hover:text-theme-phosphor py-1 transition-colors cursor-pointer"
             >
               {link.label}
             </a>
@@ -178,7 +178,7 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
                 setMobileMenuOpen(false);
                 onOpenLamp();
               }}
-              className="flex items-center gap-2 text-theme-phosphor pt-2 border-t border-theme-line w-full text-left"
+              className="flex items-center gap-2 text-theme-phosphor pt-2 border-t border-theme-line w-full text-left cursor-pointer"
             >
               <Lightbulb className="w-4 h-4" />
               <span>拉灯开场体验</span>

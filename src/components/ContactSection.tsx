@@ -4,39 +4,42 @@ import React, { useState } from 'react';
 import { Mail, MessageSquare, Copy, Check, Send, ArrowUpRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { GithubIcon } from '@/components/Icons';
 import { PERSONAL_INFO } from '../data/portfolioData';
+import { copyToClipboard } from '@/utils/clipboard';
 
 export const ContactSection: React.FC = () => {
   const [copiedType, setCopiedType] = useState<string | null>(null);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
 
-  const handleCopy = (text: string, type: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedType(type);
-    setTimeout(() => setCopiedType(null), 2500);
+  const handleCopy = async (text: string, type: string) => {
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      setCopiedType(type);
+      setTimeout(() => setCopiedType(null), 2500);
+    }
   };
 
   const handleSendEmail = (e: React.FormEvent) => {
     e.preventDefault();
     const mailtoUrl = `mailto:${PERSONAL_INFO.email}?subject=${encodeURIComponent(
-      subject || '来自作品集站点的技术交流'
+      subject || '技术交流与合作'
     )}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
   };
 
   return (
-    <section id="contact" className="relative py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-24">
+    <section id="contact" className="relative py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-24">
       {/* 标题 */}
-      <div className="text-center max-w-2xl mx-auto mb-16">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono uppercase tracking-widest text-[var(--phosphor)] bg-[var(--phosphor-subtle)] border border-[var(--phosphor-muted)] mb-4">
+      <div className="text-center max-w-2xl mx-auto mb-14">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono uppercase tracking-widest text-[var(--phosphor)] bg-[var(--phosphor-subtle)] border border-[var(--phosphor-muted)] mb-3">
           <MessageSquare className="w-3.5 h-3.5" />
           04 // Transmission Channel
         </div>
-        <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[var(--text-primary)]">
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text-primary)]">
           见字如面，开启联络
         </h2>
-        <p className="mt-4 text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed">
-          无论是大规模分布式后台架构探讨、云原生与自动化工具链协同，或是富有野心的产品孵化构想，随时欢迎信号连通。
+        <p className="mt-3 text-sm text-[var(--text-secondary)] leading-relaxed">
+          探讨后端架构、自动化工坊或独立造物，随时欢迎信号连通。
         </p>
       </div>
 
@@ -62,7 +65,7 @@ export const ContactSection: React.FC = () => {
             <div className="mt-5 pt-4 border-t border-[var(--border-line)] flex items-center gap-3">
               <button
                 onClick={() => handleCopy(PERSONAL_INFO.email, 'email')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
               >
                 {copiedType === 'email' ? (
                   <>
@@ -78,7 +81,7 @@ export const ContactSection: React.FC = () => {
               </button>
               <a
                 href={`mailto:${PERSONAL_INFO.email}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-[var(--phosphor)] hover:underline"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-[var(--phosphor)] hover:underline cursor-pointer"
               >
                 唤起邮件客户端
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -105,7 +108,7 @@ export const ContactSection: React.FC = () => {
             <div className="mt-5 pt-4 border-t border-[var(--border-line)] flex items-center gap-3">
               <button
                 onClick={() => handleCopy(PERSONAL_INFO.wechat, 'wechat')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
               >
                 {copiedType === 'wechat' ? (
                   <>
@@ -188,7 +191,7 @@ export const ContactSection: React.FC = () => {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-mono text-sm font-semibold bg-[var(--phosphor)] text-[var(--bg-base)] shadow-lg shadow-[var(--phosphor-subtle)] hover:opacity-95 transition-all active:scale-[0.98]"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-mono text-sm font-semibold bg-[var(--phosphor)] text-[var(--bg-base)] shadow-lg shadow-[var(--phosphor-subtle)] hover:opacity-95 transition-all active:scale-[0.98] cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
                     封装并唤起邮件发送

@@ -14,6 +14,8 @@ import {
   Check,
 } from "lucide-react";
 
+import { copyToClipboard } from "@/utils/clipboard";
+
 export default function BookshelfSection() {
   const [selectedCategory, setSelectedCategory] = useState<string>("全部");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -44,10 +46,12 @@ export default function BookshelfSection() {
     setExpandedBookId(expandedBookId === id ? null : id);
   };
 
-  const handleCopyQuote = (text: string, title: string, author: string) => {
-    navigator.clipboard.writeText(`“${text}” ——《${title}》${author}`);
-    setCopiedQuote(text);
-    setTimeout(() => setCopiedQuote(null), 2000);
+  const handleCopyQuote = async (text: string, title: string, author: string) => {
+    const ok = await copyToClipboard(`“${text}” ——《${title}》${author}`);
+    if (ok) {
+      setCopiedQuote(text);
+      setTimeout(() => setCopiedQuote(null), 2000);
+    }
   };
 
   // 封面色调映射
@@ -208,7 +212,7 @@ export default function BookshelfSection() {
                       href={book.weReadUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 md:flex-none w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-theme-phosphor text-[#070a13] font-bold hover:opacity-90 hover:shadow-[0_0_15px_var(--phosphor)] transition-all shadow-xs"
+                      className="flex-1 md:flex-none w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-theme-phosphor text-[#070a13] font-bold hover:opacity-90 hover:shadow-[0_0_15px_var(--phosphor)] transition-all shadow-xs cursor-pointer"
                       title="直达微信读书官方全本阅读"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
@@ -221,7 +225,7 @@ export default function BookshelfSection() {
                       href={book.doubanUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 md:flex-none w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-theme-line bg-theme-base text-theme-secondary hover:text-theme-primary hover:border-theme-violet transition-colors"
+                      className="flex-1 md:flex-none w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-theme-line bg-theme-base text-theme-secondary hover:text-theme-primary hover:border-theme-violet transition-colors cursor-pointer"
                     >
                       <span>豆瓣评分</span>
                       <ExternalLink className="w-3 h-3 opacity-60" />

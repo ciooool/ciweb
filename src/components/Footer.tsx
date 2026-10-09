@@ -44,7 +44,7 @@ export const Footer: React.FC = () => {
           <button
             onClick={scrollToTop}
             aria-label="返回顶部"
-            className="w-8 h-8 rounded-lg bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] text-[var(--text-secondary)] hover:text-[var(--phosphor)] flex items-center justify-center transition-all group"
+            className="w-8 h-8 rounded-lg bg-[var(--bg-card)] border border-[var(--border-line)] hover:border-[var(--phosphor)] text-[var(--text-secondary)] hover:text-[var(--phosphor)] flex items-center justify-center transition-all group cursor-pointer"
           >
             <ArrowUp className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
           </button>

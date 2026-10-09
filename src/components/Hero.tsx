@@ -62,7 +62,7 @@ export default function Hero() {
             <div className="flex flex-wrap items-center gap-3.5 w-full sm:w-auto">
               <a
                 href="#projects"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-theme-phosphor px-6 py-3 text-xs font-mono font-bold tracking-wider text-[#070a13] hover:opacity-90 hover:shadow-[0_0_25px_var(--phosphor)] transition-all shadow-md"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-theme-phosphor px-6 py-3 text-xs font-mono font-bold tracking-wider text-[#070a13] hover:opacity-90 hover:shadow-[0_0_25px_var(--phosphor)] transition-all shadow-md cursor-pointer"
               >
                 <Code2 className="h-4 w-4" />
                 <span>探索独立作品</span>
@@ -71,7 +71,7 @@ export default function Hero() {
 
               <a
                 href="#books"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-theme-line bg-theme-surface px-6 py-3 text-xs font-mono tracking-wider text-theme-primary hover:border-theme-violet hover:text-theme-violet transition-all shadow-xs"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-theme-line bg-theme-surface px-6 py-3 text-xs font-mono tracking-wider text-theme-primary hover:border-theme-violet hover:text-theme-violet transition-all shadow-xs cursor-pointer"
               >
                 <BookOpen className="h-4 w-4" />
                 <span>私享心智书房</span>
@@ -79,7 +79,7 @@ export default function Hero() {
 
               <a
                 href="#contact"
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-3 text-xs font-mono tracking-wider text-theme-violet hover:text-theme-phosphor transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-3 text-xs font-mono tracking-wider text-theme-violet hover:text-theme-phosphor transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>即刻交流造物</span>
