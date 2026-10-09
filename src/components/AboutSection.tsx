@@ -40,12 +40,12 @@ export default function AboutSection() {
                 <MapPin className="h-3.5 w-3.5 text-theme-phosphor" />
                 <span>{portfolioData.personal.location}</span>
                 <span className="mx-1">·</span>
-                <span className="text-theme-phosphor font-semibold">自驱造物</span>
+                <span className="text-theme-phosphor font-semibold">系统研发</span>
               </div>
 
               <p className="text-sm sm:text-base text-theme-primary leading-relaxed font-sans mb-5">
-                我是 <strong>{portfolioData.personal.name}</strong>。热爱探索现代前后端系统工程（Next.js / TypeScript / Go）与独立产品商业化闭环。
-                不写无病呻吟的代码，只做解决真实痛点的产品。
+                我是 <strong>{portfolioData.personal.name}</strong>。热爱探索现代前后端系统工程（Next.js / TypeScript / Go）与高质量架构研发。
+                不写冗余无用的代码，追求可靠实用的工程落地。
               </p>
 
               <div className="p-3.5 rounded-xl border border-theme-line bg-theme-base/60 text-xs font-mono text-theme-secondary flex items-center gap-2.5">

@@ -2,7 +2,8 @@
 
 import React from "react";
 import { portfolioData } from "@/data/portfolioData";
-import { ArrowRight, BookOpen, Terminal, Sparkles, Code2 } from "lucide-react";
+import { ArrowRight, BookOpen, Terminal, Sparkles, Code2, Search } from "lucide-react";
+import { soundManager } from "@/utils/audio";
 import AvatarBadge from "./AvatarBadge";
 
 export default function Hero() {
@@ -26,7 +27,7 @@ export default function Hero() {
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-theme-line bg-theme-surface/80 mb-6 backdrop-blur-sm shadow-xs">
               <Terminal className="w-3.5 h-3.5 text-theme-phosphor" />
               <span className="text-xs font-mono tracking-wider text-theme-phosphor">
-                SYSTEM ARCHITECT · INDIE MAKER
+                SYSTEM ARCHITECT · FULLSTACK ENGINEER
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-theme-phosphor animate-ping" />
             </div>
@@ -61,28 +62,36 @@ export default function Hero() {
             {/* 5. 核心操作引导按钮组 */}
             <div className="flex flex-wrap items-center gap-3.5 w-full sm:w-auto">
               <a
-                href="#projects"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-theme-phosphor px-6 py-3 text-xs font-mono font-bold tracking-wider text-[#070a13] hover:opacity-90 hover:shadow-[0_0_25px_var(--phosphor)] transition-all shadow-md cursor-pointer"
-              >
-                <Code2 className="h-4 w-4" />
-                <span>探索独立作品</span>
-                <ArrowRight className="h-3.5 w-3.5 opacity-80" />
-              </a>
-
-              <a
                 href="#books"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-theme-line bg-theme-surface px-6 py-3 text-xs font-mono tracking-wider text-theme-primary hover:border-theme-violet hover:text-theme-violet transition-all shadow-xs cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-theme-phosphor px-6 py-3 text-xs font-mono font-bold tracking-wider text-[#070a13] hover:opacity-90 hover:shadow-[0_0_25px_var(--phosphor)] transition-all shadow-md cursor-pointer"
               >
                 <BookOpen className="h-4 w-4" />
                 <span>私享心智书房</span>
+                <ArrowRight className="h-3.5 w-3.5 opacity-80" />
               </a>
+
+              <button
+                onClick={() => {
+                  soundManager.playClick();
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("open-quick-tools"));
+                  }
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-theme-line bg-theme-surface px-6 py-3 text-xs font-mono tracking-wider text-theme-primary hover:border-theme-phosphor hover:text-theme-phosphor transition-all shadow-xs cursor-pointer group/tools"
+              >
+                <Search className="h-4 w-4 text-theme-phosphor group-hover/tools:scale-110 transition-transform" />
+                <span>快捷工具箱</span>
+                <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono rounded bg-[#18233C] text-[#7C8DA6] border border-[#2B3A5A]">
+                  ⌘ K
+                </kbd>
+              </button>
 
               <a
                 href="#contact"
                 className="inline-flex items-center justify-center gap-1.5 px-3 py-3 text-xs font-mono tracking-wider text-theme-violet hover:text-theme-phosphor transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>即刻交流造物</span>
+                <span>即刻交流联络</span>
               </a>
             </div>
 

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import AboutSection from '@/components/AboutSection';
-import ProjectsSection from '@/components/ProjectsSection';
 import BookshelfSection from '@/components/BookshelfSection';
 import { ContactSection } from '@/components/ContactSection';
 import Footer from '@/components/Footer';
@@ -70,10 +69,7 @@ export default function Home() {
         {/* 02. 主理人自白、造物法则与主力技术栈 */}
         <AboutSection />
 
-        {/* 03. 独立作品工坊实战项目 */}
-        <ProjectsSection />
-
-        {/* 04. 殿堂级精选著作认知书房 (腾讯官方微信读书 200 OK 直达) */}
+        {/* 03. 殿堂级精选著作认知书房 (腾讯官方微信读书 200 OK 直达) */}
         <BookshelfSection />
 
         {/* 05. 见字如面全渠道联络 */}

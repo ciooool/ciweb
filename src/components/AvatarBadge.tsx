@@ -50,7 +50,7 @@ export const AvatarBadge: React.FC = () => {
               ONLINE
             </span>
             <span className="text-[10px] font-mono text-[var(--text-muted)] border-l border-[var(--border-line)] pl-2">
-              VERIFIED MAKER
+              SYSTEM ARCHITECT
             </span>
           </div>
 
@@ -101,7 +101,7 @@ export const AvatarBadge: React.FC = () => {
               </span>
             </h3>
             <p className="text-xs font-mono text-[var(--text-secondary)] mt-1">
-              全栈系统架构师 & 独立开发者
+              全栈系统架构师 & 软件工程师
             </p>
             <div className="flex items-center justify-center gap-1.5 text-[11px] font-mono text-[var(--text-muted)] mt-1.5">
               <MapPin className="w-3 h-3 text-[var(--phosphor)]" />

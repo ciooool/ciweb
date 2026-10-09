@@ -54,7 +54,6 @@ export default function Navbar({ onOpenLamp }: NavbarProps) {
 
   const navLinks = [
     { href: "#about", label: "关于主理" },
-    { href: "#projects", label: "独立作品" },
     { href: "#books", label: "心智书房" },
     { href: "#skills", label: "技术栈" },
     { href: "#contact", label: "见字如面" },

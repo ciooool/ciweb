@@ -64,11 +64,11 @@ export interface PortfolioData {
 export const portfolioData: PortfolioData = {
   personal: {
     name: "Ciooool",
-    role: "全栈系统架构师 · 独立开发者",
+    role: "全栈系统架构师 · 软件工程师",
     headline: "以代码构建系统，以阅读重塑心智。",
-    bio: "专注现代全栈工程（Next.js / TypeScript / Go）与独立产品造物。崇尚极简克制，追求长效数字复利。",
+    bio: "专注现代全栈工程（Next.js / TypeScript / Go）与高质量系统设计。崇尚极简克制，追求扎实工程素养与长效复利。",
     location: "China · Remote Available",
-    availability: "开放高质量系统架构咨询与独立造物合作",
+    availability: "开放高质量系统架构咨询与全栈工程研发",
     email: "913849845@qq.com",
     wechat: "WYZ929357",
     github: "https://github.com/ciooool",
@@ -81,7 +81,7 @@ export const portfolioData: PortfolioData = {
     { number: "5+ Years", label: "全栈架构与研发" },
     { number: "8 部", label: "殿堂级认知经典" },
     { number: "99.9%", label: "系统可用性指标" },
-    { number: "100%", label: "自驱设计与造物" },
+    { number: "11 款", label: "在线快捷开发工具" },
   ],
 
   principles: [
